@@ -9,5 +9,8 @@ export default [
   route('login', 'routes/auth/login.tsx'),
   route('register', 'routes/auth/register.tsx'),
 
-  layout('protected-layout.tsx', [index('routes/home.tsx')]),
+  layout('protected-layout.tsx', [
+    index('routes/home.tsx'),
+    route('item/:id', 'routes/item.$id.tsx'),
+  ]),
 ] satisfies RouteConfig

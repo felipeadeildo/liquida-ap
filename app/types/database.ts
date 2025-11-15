@@ -55,6 +55,13 @@ export type Database = {
             referencedColumns: ['id']
           },
           {
+            foreignKeyName: 'bids_item_id_fkey'
+            columns: ['item_id']
+            isOneToOne: false
+            referencedRelation: 'items_with_status'
+            referencedColumns: ['id']
+          },
+          {
             foreignKeyName: 'bids_user_id_fkey'
             columns: ['user_id']
             isOneToOne: false
@@ -175,14 +182,44 @@ export type Database = {
           },
         ]
       }
+      items_with_status: {
+        Row: {
+          auction_end: string | null
+          auction_start: string | null
+          bid_step: number | null
+          computed_status: Database['public']['Enums']['item_status'] | null
+          created_at: string | null
+          description: string | null
+          id: string | null
+          is_accepting_bids: boolean | null
+          is_donation: boolean | null
+          payment_status: Database['public']['Enums']['payment_status'] | null
+          photos: string[] | null
+          proof_url: string | null
+          seconds_until_end: number | null
+          seconds_until_start: number | null
+          starting_bid: number | null
+          status: Database['public']['Enums']['item_status'] | null
+          title: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       can_view_finish: { Args: { finish_user_id: string }; Returns: boolean }
+      can_view_item: {
+        Args: {
+          item_computed_status: Database['public']['Enums']['item_status']
+          item_status: Database['public']['Enums']['item_status']
+        }
+        Returns: boolean
+      }
       get_user_role: {
         Args: never
         Returns: Database['public']['Enums']['user_role']
       }
       is_admin: { Args: never; Returns: boolean }
+      item_accepts_bids: { Args: { item_id: string }; Returns: boolean }
     }
     Enums: {
       item_status: 'draft' | 'scheduled' | 'active' | 'finished'

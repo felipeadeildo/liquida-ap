@@ -1,8 +1,10 @@
 import { LogOut, Sparkles } from 'lucide-react'
 import { useNavigate } from 'react-router'
+import { AdminOnly } from '~/components/admin-only'
+import { CreateItemDialog } from '~/components/admin/create-item-dialog'
+import { ItemsList } from '~/components/auction/items-list'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
-import { Card, CardContent } from '~/components/ui/card'
 import { useAuth } from '~/lib/auth'
 import type { Route } from './+types/home'
 
@@ -14,7 +16,7 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export default function Home() {
-  const { profile, isAdmin, signOut } = useAuth()
+  const { profile, signOut } = useAuth()
   const navigate = useNavigate()
 
   const handleSignOut = async () => {
@@ -31,68 +33,53 @@ export default function Home() {
             <Sparkles className="size-6 text-primary" />
             <h1 className="text-2xl font-bold">Liquida AP</h1>
           </div>
-          <Button variant="ghost" size="sm" onClick={handleSignOut}>
-            <LogOut className="size-4 mr-2" />
-            Sair
-          </Button>
+          <div className="flex items-center gap-2">
+            <AdminOnly>
+              <CreateItemDialog />
+            </AdminOnly>
+            <Button variant="ghost" size="sm" onClick={handleSignOut}>
+              <LogOut className="size-4 mr-2" />
+              Sair
+            </Button>
+          </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center p-4 bg-background">
-        <Card className="w-full max-w-2xl">
-          <CardContent className="pt-6 text-center space-y-6">
-            <div className="space-y-2">
-              <h2 className="text-4xl font-bold">
-                Bem-vindo, {profile?.name || 'visitante'}! 👋
+      <main className="flex-1 p-4 bg-background">
+        <div className="container mx-auto max-w-7xl space-y-6">
+          {/* Welcome Section */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold">
+                Olá, {profile?.name?.split(' ')[0] || 'visitante'}!
               </h2>
-              {(profile?.is_insper || isAdmin) && (
-                <div className="flex justify-center gap-2">
-                  {isAdmin && (
-                    <Badge variant="default" className="text-sm">
-                      Admin
-                    </Badge>
-                  )}
-                  {profile?.is_insper && (
-                    <Badge variant="secondary" className="text-sm">
-                      Estudante Insper
-                    </Badge>
-                  )}
-                  {profile?.course && (
-                    <Badge variant="outline" className="text-sm">
-                      {profile.course}
-                    </Badge>
-                  )}
-                </div>
+              <p className="text-sm text-muted-foreground">Leilão do AP 72</p>
+            </div>
+            <div className="flex gap-2">
+              {profile?.is_insper && (
+                <>
+                  <AdminOnly>
+                    <Badge variant="default">Admin</Badge>
+                  </AdminOnly>
+                  <Badge variant="secondary">Insper</Badge>
+                </>
               )}
+              <AdminOnly fallback={null}>
+                {!profile?.is_insper && <Badge variant="default">Admin</Badge>}
+              </AdminOnly>
             </div>
+          </div>
 
-            <div className="space-y-4">
-              <p className="text-muted-foreground text-lg">
-                Bem-vindo ao Liquida AP - a plataforma de leilão para os itens
-                do AP 72.
-              </p>
-              <div className="bg-muted/50 border rounded-lg p-6 space-y-2">
-                <h3 className="text-xl font-semibold flex items-center justify-center gap-2">
-                  <Sparkles className="size-5 text-primary" />
-                  Em Breve
-                </h3>
-                <p className="text-muted-foreground">
-                  Estamos preparando algo especial! O leilão começará em breve,
-                  então fique ligado para ofertas incríveis em móveis,
-                  eletrônicos e muito mais.
-                </p>
-              </div>
-            </div>
-
-            <div className="pt-4">
-              <p className="text-sm text-muted-foreground">
-                Ap 72 ta acabando... que triste! 😢 Mas vamos aproveitar ao
-                máximo!
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+          {/* Items Grid */}
+          <div>
+            <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+              <Sparkles className="size-6 text-primary" />
+              Itens Disponíveis
+            </h2>
+            <ItemsList />
+          </div>
+        </div>
       </main>
     </div>
   )
