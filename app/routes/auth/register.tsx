@@ -12,6 +12,13 @@ import {
 import { Checkbox } from '~/components/ui/checkbox'
 import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '~/components/ui/select'
 import { Spinner } from '~/components/ui/spinner'
 import { useAuth } from '~/lib/auth'
 import { supabase } from '~/lib/supabase'
@@ -19,8 +26,8 @@ import type { Route } from './+types/register'
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: 'Register - Liquida AP' },
-    { name: 'description', content: 'Create your account' },
+    { title: 'Cadastro - Liquida AP' },
+    { name: 'description', content: 'Crie sua conta' },
   ]
 }
 
@@ -62,7 +69,7 @@ export default function Register() {
     e.preventDefault()
     setLoading(true)
 
-    const loadingToast = toast.loading('Creating your account...')
+    const loadingToast = toast.loading('Criando sua conta...')
 
     try {
       const { data, error: signUpError } = await supabase.auth.signUp({
@@ -82,15 +89,15 @@ export default function Register() {
       if (signUpError) throw signUpError
 
       if (data.session) {
-        toast.success('Account created successfully!', { id: loadingToast })
+        toast.success('Conta criada com sucesso!', { id: loadingToast })
         navigate('/', { replace: true })
       } else {
-        toast.info('Check your email to confirm your account', {
+        toast.info('Verifique seu email para confirmar sua conta', {
           id: loadingToast,
         })
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'An error occurred'
+      const message = err instanceof Error ? err.message : 'Ocorreu um erro'
       toast.error(message, { id: loadingToast })
     } finally {
       setLoading(false)
@@ -106,23 +113,23 @@ export default function Register() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-3xl font-bold text-center">
-            Create your account
+            Crie sua conta
           </CardTitle>
           <CardDescription className="text-center">
-            Join Liquida AP to start bidding
+            Entre no Liquida AP para começar a dar lances
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
+              <Label htmlFor="name">Nome Completo</Label>
               <Input
                 id="name"
                 type="text"
                 value={formData.name}
                 onChange={(e) => handleChange('name', e.target.value)}
                 required
-                placeholder="John Doe"
+                placeholder="João Silva"
               />
             </div>
 
@@ -134,7 +141,7 @@ export default function Register() {
                 value={formData.email}
                 onChange={(e) => handleChange('email', e.target.value)}
                 required
-                placeholder="you@example.com"
+                placeholder="voce@exemplo.com"
               />
             </div>
 
@@ -151,7 +158,7 @@ export default function Register() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Senha</Label>
               <Input
                 id="password"
                 type="password"
@@ -162,7 +169,7 @@ export default function Register() {
                 placeholder="••••••••"
               />
               <p className="text-xs text-muted-foreground">
-                At least 6 characters
+                No mínimo 6 caracteres
               </p>
             </div>
 
@@ -175,48 +182,83 @@ export default function Register() {
                 }
               />
               <Label htmlFor="isInsper" className="cursor-pointer">
-                I'm an Insper student
+                Sou estudante do Insper
               </Label>
             </div>
 
             {formData.isInsper && (
-              <>
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="course">Course</Label>
-                  <Input
-                    id="course"
-                    type="text"
+                  <Label htmlFor="course">Curso</Label>
+                  <Select
                     value={formData.course}
-                    onChange={(e) => handleChange('course', e.target.value)}
-                    placeholder="Engineering, Business, etc."
-                  />
+                    onValueChange={(value) => handleChange('course', value)}
+                  >
+                    <SelectTrigger id="course">
+                      <SelectValue placeholder="Selecione seu curso" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Administração">
+                        Administração
+                      </SelectItem>
+                      <SelectItem value="Ciência da Computação">
+                        Ciência da Computação
+                      </SelectItem>
+                      <SelectItem value="Direito">Direito</SelectItem>
+                      <SelectItem value="Economia">Economia</SelectItem>
+                      <SelectItem value="Engenharia da Computação">
+                        Engenharia da Computação
+                      </SelectItem>
+                      <SelectItem value="Engenharia Mecânica">
+                        Engenharia Mecânica
+                      </SelectItem>
+                      <SelectItem value="Engenharia Mecatrônica">
+                        Engenharia Mecatrônica
+                      </SelectItem>
+                      <SelectItem value="Insper One">Insper One</SelectItem>
+                      <SelectItem value="Outros">Outros</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="semester">Semester</Label>
-                  <Input
-                    id="semester"
-                    type="text"
+                  <Label htmlFor="semester">Semestre</Label>
+                  <Select
                     value={formData.semester}
-                    onChange={(e) => handleChange('semester', e.target.value)}
-                    placeholder="1st, 2nd, 3rd..."
-                  />
+                    onValueChange={(value) => handleChange('semester', value)}
+                  >
+                    <SelectTrigger id="semester">
+                      <SelectValue placeholder="Selecione seu semestre" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1º">1º</SelectItem>
+                      <SelectItem value="2º">2º</SelectItem>
+                      <SelectItem value="3º">3º</SelectItem>
+                      <SelectItem value="4º">4º</SelectItem>
+                      <SelectItem value="5º">5º</SelectItem>
+                      <SelectItem value="6º">6º</SelectItem>
+                      <SelectItem value="7º">7º</SelectItem>
+                      <SelectItem value="8º">8º</SelectItem>
+                      <SelectItem value="9º">9º</SelectItem>
+                      <SelectItem value="10º">10º</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-              </>
+              </div>
             )}
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Creating account...' : 'Sign up'}
+              {loading ? 'Criando conta...' : 'Cadastrar'}
             </Button>
           </form>
 
           <p className="text-center text-sm text-muted-foreground mt-4">
-            Already have an account?{' '}
+            Já tem uma conta?{' '}
             <Link
               to="/login"
               className="text-primary hover:underline font-medium"
             >
-              Sign in
+              Entrar
             </Link>
           </p>
         </CardContent>

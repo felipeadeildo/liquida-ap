@@ -18,7 +18,7 @@ export default function ProtectedLayout() {
       <div className="h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
           <Spinner className="size-8 mx-auto" />
-          <p className="text-muted-foreground">Loading...</p>
+          <p className="text-muted-foreground">Carregando...</p>
         </div>
       </div>
     )

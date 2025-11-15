@@ -19,7 +19,7 @@ import type { Route } from './+types/login'
 export function meta({}: Route.MetaArgs) {
   return [
     { title: 'Login - Liquida AP' },
-    { name: 'description', content: 'Sign in to your account' },
+    { name: 'description', content: 'Entre na sua conta' },
   ]
 }
 
@@ -63,11 +63,11 @@ export default function Login() {
       if (error) throw error
 
       if (data.session) {
-        toast.success('Welcome back!')
+        toast.success('Bem-vindo de volta!')
         navigate('/', { replace: true })
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'An error occurred'
+      const message = err instanceof Error ? err.message : 'Ocorreu um erro'
       toast.error(message)
     } finally {
       setLoading(false)
@@ -79,10 +79,10 @@ export default function Login() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-3xl font-bold text-center">
-            Welcome back
+            Bem-vindo de volta
           </CardTitle>
           <CardDescription className="text-center">
-            Sign in to your account to continue
+            Entre na sua conta para continuar
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -95,12 +95,12 @@ export default function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                placeholder="you@example.com"
+                placeholder="voce@exemplo.com"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Senha</Label>
               <Input
                 id="password"
                 type="password"
@@ -112,17 +112,17 @@ export default function Login() {
             </div>
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Signing in...' : 'Sign in'}
+              {loading ? 'Entrando...' : 'Entrar'}
             </Button>
           </form>
 
           <p className="text-center text-sm text-muted-foreground mt-4">
-            Don't have an account?{' '}
+            Não tem uma conta?{' '}
             <Link
               to="/register"
               className="text-primary hover:underline font-medium"
             >
-              Sign up
+              Cadastre-se
             </Link>
           </p>
         </CardContent>

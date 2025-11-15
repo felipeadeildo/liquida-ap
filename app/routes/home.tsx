@@ -1,8 +1,8 @@
-import { useNavigate } from 'react-router'
 import { LogOut, Sparkles } from 'lucide-react'
+import { useNavigate } from 'react-router'
+import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Card, CardContent } from '~/components/ui/card'
-import { Badge } from '~/components/ui/badge'
 import { useAuth } from '~/lib/auth'
 import type { Route } from './+types/home'
 
@@ -33,7 +33,7 @@ export default function Home() {
           </div>
           <Button variant="ghost" size="sm" onClick={handleSignOut}>
             <LogOut className="size-4 mr-2" />
-            Sign Out
+            Sair
           </Button>
         </div>
       </header>
@@ -44,12 +44,12 @@ export default function Home() {
           <CardContent className="pt-6 text-center space-y-6">
             <div className="space-y-2">
               <h2 className="text-4xl font-bold">
-                Welcome, {profile?.name || 'there'}! 👋
+                Bem-vindo, {profile?.name || 'visitante'}! 👋
               </h2>
               {profile?.is_insper && (
                 <div className="flex justify-center gap-2">
                   <Badge variant="secondary" className="text-sm">
-                    Insper Student
+                    Estudante Insper
                   </Badge>
                   {profile.course && (
                     <Badge variant="outline" className="text-sm">
@@ -62,22 +62,26 @@ export default function Home() {
 
             <div className="space-y-4">
               <p className="text-muted-foreground text-lg">
-                Welcome to Liquida AP - the auction platform for AP 72 items.
+                Bem-vindo ao Liquida AP - a plataforma de leilão para os itens
+                do AP 72.
               </p>
               <div className="bg-muted/50 border rounded-lg p-6 space-y-2">
                 <h3 className="text-xl font-semibold flex items-center justify-center gap-2">
                   <Sparkles className="size-5 text-primary" />
-                  Coming Soon
+                  Em Breve
                 </h3>
                 <p className="text-muted-foreground">
-                  We're preparing something special! The auction will start soon, so stay tuned for amazing deals on furniture, electronics, and more.
+                  Estamos preparando algo especial! O leilão começará em breve,
+                  então fique ligado para ofertas incríveis em móveis,
+                  eletrônicos e muito mais.
                 </p>
               </div>
             </div>
 
             <div className="pt-4">
               <p className="text-sm text-muted-foreground">
-                Ap 72 ta acabando... que triste! 😢 But let's make the best of it!
+                Ap 72 ta acabando... que triste! 😢 Mas vamos aproveitar ao
+                máximo!
               </p>
             </div>
           </CardContent>
