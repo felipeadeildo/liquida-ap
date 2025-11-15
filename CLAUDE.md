@@ -234,3 +234,5 @@ Auto-transition to `finished` via trigger/function when `auction_end` passes, cr
 - When creating components, use filenames as this-one-here.tsx (despite the compoenent name being ThisOneHere)
 - When creating pages, use filenames as this-one-here.tsx (despite the page name being ThisOneHere)
 - Prefer using supabase queryies instead of Supabase functions, we will protect our database with the use of RLS
+- We use bun as our package manager
+- When needed a new compoentns, just add by executing bunx shadcn@latest add [component-name]
