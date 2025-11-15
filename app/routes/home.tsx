@@ -14,7 +14,7 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export default function Home() {
-  const { profile, signOut } = useAuth()
+  const { profile, isAdmin, signOut } = useAuth()
   const navigate = useNavigate()
 
   const handleSignOut = async () => {
@@ -46,12 +46,19 @@ export default function Home() {
               <h2 className="text-4xl font-bold">
                 Bem-vindo, {profile?.name || 'visitante'}! 👋
               </h2>
-              {profile?.is_insper && (
+              {(profile?.is_insper || isAdmin) && (
                 <div className="flex justify-center gap-2">
-                  <Badge variant="secondary" className="text-sm">
-                    Estudante Insper
-                  </Badge>
-                  {profile.course && (
+                  {isAdmin && (
+                    <Badge variant="default" className="text-sm">
+                      Admin
+                    </Badge>
+                  )}
+                  {profile?.is_insper && (
+                    <Badge variant="secondary" className="text-sm">
+                      Estudante Insper
+                    </Badge>
+                  )}
+                  {profile?.course && (
                     <Badge variant="outline" className="text-sm">
                       {profile.course}
                     </Badge>

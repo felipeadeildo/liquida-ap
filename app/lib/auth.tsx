@@ -16,6 +16,7 @@ interface AuthContextType {
   profile: UserProfile | null
   session: Session | null
   loading: boolean
+  isAdmin: boolean
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
 }
@@ -101,6 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     profile,
     session,
     loading,
+    isAdmin: profile?.role === 'admin',
     signOut,
     refreshProfile,
   }
@@ -124,6 +126,21 @@ export function useRequireAuth() {
 
   if (!auth.loading && !auth.user) {
     throw new Response('Unauthorized', { status: 401 })
+  }
+
+  return auth
+}
+
+// Helper hook to require admin role
+export function useRequireAdmin() {
+  const auth = useAuth()
+
+  if (!auth.loading && !auth.user) {
+    throw new Response('Unauthorized', { status: 401 })
+  }
+
+  if (!auth.loading && !auth.isAdmin) {
+    throw new Response('Forbidden', { status: 403 })
   }
 
   return auth
