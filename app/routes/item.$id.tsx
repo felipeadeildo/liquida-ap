@@ -1,21 +1,15 @@
 import confetti from 'canvas-confetti'
-import { ArrowLeft, ChevronDown } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { AuctionStatusBadge } from '~/components/auction/auction-status-badge'
-import { BidChart } from '~/components/auction/bid-chart'
 import { BidControlPanel } from '~/components/auction/bid-control-panel'
 import { BidLeaderboard } from '~/components/auction/bid-leaderboard'
 import { CountdownTimer } from '~/components/auction/countdown-timer'
 import { HeroCarousel } from '~/components/auction/hero-carousel'
 import { PresenceIndicator } from '~/components/auction/presence-indicator'
 import { Button } from '~/components/ui/button'
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '~/components/ui/collapsible'
 import { Spinner } from '~/components/ui/spinner'
 import { useAuth } from '~/lib/auth'
 import { supabase } from '~/lib/supabase'
@@ -55,7 +49,6 @@ export default function ItemDetail() {
   const [currentBid, setCurrentBid] = useState(0)
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null)
   const [broadcastChannel, setBroadcastChannel] = useState<any>(null)
-  const [chartOpen, setChartOpen] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -327,7 +320,7 @@ export default function ItemDetail() {
         : 'finished'
 
   return (
-    <div className="min-h-screen bg-background pb-32 lg:pb-8">
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-background sticky top-0 z-30">
         <div className="container mx-auto px-4 py-3">
@@ -339,27 +332,27 @@ export default function ItemDetail() {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 md:px-6 py-4 md:py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-6 lg:gap-8">
+      <main className="container mx-auto px-4 md:px-6 py-3 md:py-4 pb-[400px] lg:pb-20">
+        <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-4 lg:gap-6">
           {/* Left Column - Hero Carousel (60% on desktop) */}
-          <div className="space-y-4">
+          <div className="space-y-3">
             <HeroCarousel photos={item.photos || []} />
 
             {/* Description - Desktop Only */}
-            <div className="hidden lg:block space-y-2">
-              <h2 className="text-lg font-semibold">Descrição</h2>
-              <p className="text-muted-foreground whitespace-pre-wrap">
+            <div className="hidden lg:block space-y-1">
+              <h2 className="text-base font-semibold">Descrição</h2>
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
                 {item.description}
               </p>
             </div>
           </div>
 
           {/* Right Column - Info & Controls (40% on desktop) */}
-          <div className="space-y-4">
+          <div className="space-y-3">
             {/* Title + Badges */}
-            <div className="space-y-2">
-              <div className="flex items-start justify-between gap-3">
-                <h1 className="text-2xl md:text-3xl font-bold flex-1">
+            <div className="space-y-1.5">
+              <div className="flex items-start justify-between gap-2">
+                <h1 className="text-xl md:text-2xl font-bold flex-1">
                   {item.title}
                 </h1>
                 <AuctionStatusBadge
@@ -383,14 +376,14 @@ export default function ItemDetail() {
 
             {/* Current Bid */}
             {!isDonation && (
-              <div className="space-y-1 py-4 border-y">
-                <p className="text-sm text-muted-foreground">Lance atual</p>
-                <p className="text-4xl md:text-5xl font-bold text-primary">
+              <div className="space-y-0.5 py-3 border-y">
+                <p className="text-xs text-muted-foreground">Lance atual</p>
+                <p className="text-3xl md:text-4xl font-bold text-primary">
                   {formatCurrency(currentBid)}
                 </p>
                 {item.is_accepting_bids && (
-                  <p className="text-xs md:text-sm text-muted-foreground">
-                    Próximo lance mínimo: {formatCurrency(minBid)}
+                  <p className="text-[10px] md:text-xs text-muted-foreground">
+                    Próximo mínimo: {formatCurrency(minBid)}
                   </p>
                 )}
               </div>
@@ -413,11 +406,12 @@ export default function ItemDetail() {
             {/* Login Prompt - Desktop */}
             {!user && item.is_accepting_bids && (
               <div className="hidden lg:block">
-                <div className="border rounded-lg p-6 text-center space-y-4 bg-muted/30">
-                  <p className="text-sm text-muted-foreground">
+                <div className="border rounded-lg p-4 text-center space-y-3 bg-muted/30">
+                  <p className="text-xs text-muted-foreground">
                     Faça login para participar do leilão
                   </p>
                   <Button
+                    size="sm"
                     className="w-full max-w-xs"
                     onClick={() => navigate('/login')}
                   >
@@ -447,50 +441,10 @@ export default function ItemDetail() {
               />
             )}
 
-            {/* Chart - Desktop (always visible, compact) */}
-            {!isDonation && bids.length > 0 && (
-              <div className="hidden lg:block">
-                <BidChart
-                  itemId={item.id || ''}
-                  startingBid={item.starting_bid || 0}
-                  compact
-                />
-              </div>
-            )}
-
-            {/* Chart - Mobile (collapsible) */}
-            {!isDonation && bids.length > 0 && (
-              <div className="lg:hidden">
-                <Collapsible open={chartOpen} onOpenChange={setChartOpen}>
-                  <CollapsibleTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-between"
-                      size="lg"
-                    >
-                      <span>Gráfico de Evolução</span>
-                      <ChevronDown
-                        className={cn(
-                          'size-4 transition-transform',
-                          chartOpen ? 'rotate-180' : ''
-                        )}
-                      />
-                    </Button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="mt-4">
-                    <BidChart
-                      itemId={item.id || ''}
-                      startingBid={item.starting_bid || 0}
-                    />
-                  </CollapsibleContent>
-                </Collapsible>
-              </div>
-            )}
-
             {/* Description - Mobile Only */}
-            <div className="lg:hidden space-y-2 pt-2">
-              <h2 className="text-lg font-semibold">Descrição</h2>
-              <p className="text-muted-foreground whitespace-pre-wrap">
+            <div className="lg:hidden space-y-1">
+              <h2 className="text-base font-semibold">Descrição</h2>
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
                 {item.description}
               </p>
             </div>
@@ -498,9 +452,9 @@ export default function ItemDetail() {
         </div>
       </main>
 
-      {/* Mobile Sticky Bid Bar */}
+      {/* Mobile Sticky Bid Panel */}
       {item.is_accepting_bids && !isDonation && user && (
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-t shadow-2xl p-4">
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background border-t shadow-2xl p-2 max-h-[60vh] overflow-y-auto">
           <div className="container mx-auto max-w-2xl">
             <BidControlPanel
               minBid={minBid}
@@ -517,13 +471,14 @@ export default function ItemDetail() {
 
       {/* Mobile Login Prompt Sticky */}
       {!user && item.is_accepting_bids && (
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-t shadow-2xl p-4">
-          <div className="container mx-auto max-w-2xl space-y-2">
-            <p className="text-sm text-center text-muted-foreground">
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background border-t shadow-2xl p-3">
+          <div className="container mx-auto max-w-2xl space-y-1.5">
+            <p className="text-xs text-center text-muted-foreground">
               Faça login para participar do leilão
             </p>
             <Button
-              className="w-full min-h-12"
+              size="sm"
+              className="w-full"
               onClick={() => navigate('/login')}
             >
               Fazer Login

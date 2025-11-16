@@ -79,43 +79,43 @@ export function BidControlPanel({
   }
 
   return (
-    <Card className={cn('p-4 space-y-4', className)}>
+    <Card className={cn('p-3 space-y-3', className)}>
       {/* User Status */}
       {userRank !== undefined && userRank !== null && (
         <div
           className={cn(
-            'text-center py-2 px-4 rounded-md font-semibold text-sm',
+            'text-center py-1.5 px-3 rounded-md font-semibold text-xs',
             isWinning
-              ? 'bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300'
-              : 'bg-yellow-100 dark:bg-yellow-950 text-yellow-700 dark:text-yellow-300'
+              ? 'bg-accent/10 text-accent border border-accent'
+              : 'bg-secondary/10 text-secondary border border-secondary'
           )}
         >
-          {isWinning ? <>Você está vencendo! 🎉</> : <>Você é #{userRank}</>}
+          {isWinning ? <>Você está vencendo!</> : <>Você é #{userRank}</>}
         </div>
       )}
 
       {/* Title */}
-      <div className="space-y-1">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          <Gavel className="size-5" />
+      <div className="space-y-0.5">
+        <h3 className="text-base font-semibold flex items-center gap-1.5">
+          <Gavel className="size-4" />
           Fazer Lance
         </h3>
-        <p className="text-sm text-muted-foreground">
-          Valor mínimo: {formatCurrency(minBid)}
+        <p className="text-xs text-muted-foreground">
+          Mínimo: {formatCurrency(minBid)}
         </p>
       </div>
 
       {/* Quick Bid Buttons */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-1.5">
         {quickBids.map((amount, index) => (
           <Button
             key={index}
             onClick={() => handleQuickBid(amount)}
             disabled={disabled || loading}
             variant={index === 0 ? 'default' : 'outline'}
-            size="lg"
+            size="sm"
             className={cn(
-              'font-bold',
+              'font-semibold text-xs',
               index === 0 && 'bg-primary text-primary-foreground'
             )}
           >
@@ -125,9 +125,9 @@ export function BidControlPanel({
       </div>
 
       {/* Custom Bid Input */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Ou digite um valor</label>
-        <div className="flex gap-2">
+      <div className="space-y-1.5">
+        <label className="text-xs font-medium">Ou digite um valor</label>
+        <div className="flex gap-1.5">
           <Input
             type="number"
             step={bidStep}
@@ -146,8 +146,8 @@ export function BidControlPanel({
           <Button
             onClick={handleCustomBid}
             disabled={!customBid || disabled || loading}
-            size="lg"
-            className="px-6"
+            size="sm"
+            className="px-4"
           >
             {loading ? 'Enviando...' : 'Enviar'}
           </Button>
@@ -156,7 +156,7 @@ export function BidControlPanel({
 
       {/* Disabled Message */}
       {disabled && (
-        <p className="text-xs text-center text-muted-foreground">
+        <p className="text-[10px] text-center text-muted-foreground">
           Leilão não está aceitando lances no momento
         </p>
       )}

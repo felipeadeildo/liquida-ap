@@ -26,14 +26,14 @@ export function CountdownTimer({
 }: CountdownTimerProps) {
   if (seconds === null || seconds <= 0) return null
 
-  // Determine color based on urgency
+  // Determine color based on urgency using theme colors
   const getColorClass = () => {
-    if (isStartCountdown) return 'text-blue-600 dark:text-blue-400'
+    if (isStartCountdown) return 'text-primary'
 
-    if (seconds < 30) return 'text-red-600 dark:text-red-400 animate-pulse'
-    if (seconds < 600) return 'text-red-600 dark:text-red-400' // <10 min
-    if (seconds < 3600) return 'text-yellow-600 dark:text-yellow-400' // <1 hour
-    return 'text-green-600 dark:text-green-400'
+    if (seconds < 30) return 'text-destructive animate-pulse'
+    if (seconds < 600) return 'text-destructive' // <10 min
+    if (seconds < 3600) return 'text-accent' // <1 hour
+    return 'text-secondary' // >1 hour
   }
 
   const label = isStartCountdown ? 'Começa em' : 'Termina em'

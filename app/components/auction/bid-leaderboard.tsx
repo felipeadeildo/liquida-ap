@@ -52,16 +52,16 @@ export function BidLeaderboard({
 
   if (bids.length === 0) {
     return (
-      <Card className={cn('p-6 text-center text-muted-foreground', className)}>
-        <p className="text-sm">Nenhum lance ainda. Seja o primeiro!</p>
+      <Card className={cn('p-4 text-center text-muted-foreground', className)}>
+        <p className="text-xs">Nenhum lance ainda. Seja o primeiro!</p>
       </Card>
     )
   }
 
   return (
-    <div className={cn('space-y-3', className)}>
+    <div className={cn('space-y-2', className)}>
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
           Lances Recentes
         </h3>
         {hasMore && onViewAll && (
@@ -69,14 +69,14 @@ export function BidLeaderboard({
             variant="ghost"
             size="sm"
             onClick={onViewAll}
-            className="text-xs h-auto py-1"
+            className="text-[10px] h-auto py-0.5"
           >
             Ver todos ({bids.length})
           </Button>
         )}
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <AnimatePresence mode="popLayout">
           {displayBids.map((bid, index) => {
             const isLeader = index === 0
@@ -94,32 +94,29 @@ export function BidLeaderboard({
               >
                 <Card
                   className={cn(
-                    'p-3 transition-all',
-                    isLeader &&
-                      'bg-linear-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950/20 dark:to-yellow-900/20 border-yellow-300 dark:border-yellow-700',
+                    'p-2 transition-all',
+                    isLeader && 'bg-accent/10 border-accent',
                     isCurrentUser &&
                       !isLeader &&
                       'bg-primary/5 border-primary/30',
                     !isLeader && !isCurrentUser && 'bg-card'
                   )}
                 >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
                       {/* Position Badge */}
                       <div
                         className={cn(
-                          'size-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0',
-                          isLeader
-                            ? 'bg-yellow-500 text-white'
-                            : position === 2
-                              ? 'bg-gray-400 text-white'
-                              : position === 3
-                                ? 'bg-orange-600 text-white'
-                                : 'bg-muted text-muted-foreground'
+                          'size-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0',
+                          isLeader && 'bg-accent text-accent-foreground',
+                          position === 2 && 'bg-muted text-muted-foreground',
+                          position === 3 &&
+                            'bg-secondary text-secondary-foreground',
+                          position > 3 && 'bg-muted text-muted-foreground'
                         )}
                       >
                         {isLeader ? (
-                          <Crown className="size-4" />
+                          <Crown className="size-3" />
                         ) : (
                           `#${position}`
                         )}
@@ -127,22 +124,22 @@ export function BidLeaderboard({
 
                       {/* User Info */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="font-semibold text-sm truncate">
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-semibold text-xs truncate">
                             {bid.users?.name?.split(' ')[0] || 'Anônimo'}
                           </p>
                           {isCurrentUser && (
-                            <span className="text-xs font-medium text-primary">
+                            <span className="text-[10px] font-medium text-primary">
                               (Você)
                             </span>
                           )}
                           {isLeader && (
-                            <span className="text-xs font-medium text-yellow-700 dark:text-yellow-400">
+                            <span className="text-[10px] font-medium text-accent">
                               Liderando!
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-[10px] text-muted-foreground">
                           {bid.created_at
                             ? formatRelativeTime(bid.created_at)
                             : ''}
@@ -152,14 +149,12 @@ export function BidLeaderboard({
 
                     {/* Bid Value */}
                     <div className="text-right shrink-0">
-                      <div className="flex items-center gap-1">
-                        {isLeader && (
-                          <ArrowUp className="size-3.5 text-green-600 dark:text-green-400" />
-                        )}
+                      <div className="flex items-center gap-0.5">
+                        {isLeader && <ArrowUp className="size-3 text-accent" />}
                         <p
                           className={cn(
                             'font-bold',
-                            isLeader ? 'text-base' : 'text-sm'
+                            isLeader ? 'text-sm' : 'text-xs'
                           )}
                         >
                           {formatCurrency(bid.value)}
