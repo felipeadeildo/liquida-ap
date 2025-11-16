@@ -50,7 +50,7 @@ export function BidControlPanel({
         particleCount: 100,
         spread: 70,
         origin: { y: 0.6 },
-        colors: ['#FFD700', '#FFA500', '#FF6347'],
+        colors: ['#8b5cf6', '#f97316', '#a78bfa'], // primary, destructive, chart-2 themed
       })
 
       // Play success sound (optional)
@@ -86,8 +86,8 @@ export function BidControlPanel({
           className={cn(
             'text-center py-1.5 px-3 rounded-md font-semibold text-xs',
             isWinning
-              ? 'bg-accent/10 text-accent border border-accent'
-              : 'bg-secondary/10 text-secondary border border-secondary'
+              ? 'bg-primary/10 text-primary border border-primary'
+              : 'bg-secondary/10 text-secondary-foreground border border-secondary'
           )}
         >
           {isWinning ? <>Você está vencendo!</> : <>Você é #{userRank}</>}

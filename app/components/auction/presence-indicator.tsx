@@ -53,7 +53,7 @@ export function PresenceIndicator({
     >
       <div className="relative flex items-center">
         <Eye className="size-3.5" />
-        <span className="absolute -top-0.5 -right-0.5 size-1.5 bg-accent rounded-full animate-pulse" />
+        <span className="absolute -top-0.5 -right-0.5 size-1.5 bg-destructive rounded-full animate-pulse" />
       </div>
       <span className="font-medium">
         {viewerCount} {viewerCount === 1 ? 'pessoa' : 'pessoas'} assistindo

@@ -95,7 +95,7 @@ export function BidLeaderboard({
                 <Card
                   className={cn(
                     'p-2 transition-all',
-                    isLeader && 'bg-accent/10 border-accent',
+                    isLeader && 'bg-primary/10 border-primary',
                     isCurrentUser &&
                       !isLeader &&
                       'bg-primary/5 border-primary/30',
@@ -108,10 +108,11 @@ export function BidLeaderboard({
                       <div
                         className={cn(
                           'size-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0',
-                          isLeader && 'bg-accent text-accent-foreground',
-                          position === 2 && 'bg-muted text-muted-foreground',
+                          isLeader && 'bg-chart-1 text-primary-foreground',
+                          position === 2 &&
+                            'bg-chart-2 text-primary-foreground',
                           position === 3 &&
-                            'bg-secondary text-secondary-foreground',
+                            'bg-chart-3 text-primary-foreground',
                           position > 3 && 'bg-muted text-muted-foreground'
                         )}
                       >
@@ -134,7 +135,7 @@ export function BidLeaderboard({
                             </span>
                           )}
                           {isLeader && (
-                            <span className="text-[10px] font-medium text-accent">
+                            <span className="text-[10px] font-medium text-primary">
                               Liderando!
                             </span>
                           )}
@@ -150,7 +151,9 @@ export function BidLeaderboard({
                     {/* Bid Value */}
                     <div className="text-right shrink-0">
                       <div className="flex items-center gap-0.5">
-                        {isLeader && <ArrowUp className="size-3 text-accent" />}
+                        {isLeader && (
+                          <ArrowUp className="size-3 text-primary" />
+                        )}
                         <p
                           className={cn(
                             'font-bold',

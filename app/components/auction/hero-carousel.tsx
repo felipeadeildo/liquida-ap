@@ -138,7 +138,7 @@ export function HeroCarousel({ photos, className }: HeroCarouselProps) {
 
           {/* Image Counter */}
           {photos.length > 1 && (
-            <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
+            <div className="absolute bottom-2 right-2 bg-background/80 backdrop-blur-sm text-foreground text-xs px-2 py-1 rounded">
               {selectedIndex + 1} / {photos.length}
             </div>
           )}
@@ -191,7 +191,7 @@ export function HeroCarousel({ photos, className }: HeroCarouselProps) {
             </Button>
 
             {/* Image Counter */}
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/60 text-white px-4 py-2 rounded-full z-10">
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-background/80 backdrop-blur-sm text-foreground px-4 py-2 rounded-full z-10">
               {selectedIndex + 1} / {photos.length}
             </div>
 

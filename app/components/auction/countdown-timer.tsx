@@ -30,10 +30,10 @@ export function CountdownTimer({
   const getColorClass = () => {
     if (isStartCountdown) return 'text-primary'
 
-    if (seconds < 30) return 'text-destructive animate-pulse'
-    if (seconds < 600) return 'text-destructive' // <10 min
-    if (seconds < 3600) return 'text-accent' // <1 hour
-    return 'text-secondary' // >1 hour
+    if (seconds < 30) return 'text-destructive animate-pulse' // <30s critical
+    if (seconds < 600) return 'text-chart-2' // <10 min alert
+    if (seconds < 3600) return 'text-chart-3' // <1 hour warning
+    return 'text-muted-foreground' // >1 hour calm
   }
 
   const label = isStartCountdown ? 'Começa em' : 'Termina em'

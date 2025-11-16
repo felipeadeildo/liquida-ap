@@ -266,7 +266,7 @@ export default function ItemDetail() {
           particleCount: 150,
           spread: 80,
           origin: { y: 0.6 },
-          colors: ['#FFD700', '#FFA500', '#FF6347'],
+          colors: ['#8b5cf6', '#f97316', '#a78bfa'], // primary, destructive, chart-2 themed
         })
       }
     } catch (err) {
