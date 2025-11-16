@@ -40,6 +40,7 @@ function formatTimeRemaining(seconds: number | null): string {
 
 export function ItemCard({ item }: ItemCardProps) {
   const [currentBid, setCurrentBid] = useState<number>(item.starting_bid || 0)
+  const [isNewBid, setIsNewBid] = useState(false)
   const isDonation = item.is_donation || false
 
   useEffect(() => {
@@ -80,6 +81,8 @@ export function ItemCard({ item }: ItemCardProps) {
         (payload: any) => {
           if (payload.new?.value && !payload.new?.is_deleted) {
             setCurrentBid(payload.new.value)
+            setIsNewBid(true)
+            setTimeout(() => setIsNewBid(false), 2000)
           }
         }
       )
@@ -100,7 +103,7 @@ export function ItemCard({ item }: ItemCardProps) {
               {item.photos && item.photos.length > 0 ? (
                 item.photos.map((photo, index) => (
                   <CarouselItem key={index}>
-                    <div className="relative aspect-square">
+                    <div className="relative aspect-4/3">
                       <img
                         src={photo}
                         alt={`${item.title} - ${index + 1}`}
@@ -111,7 +114,7 @@ export function ItemCard({ item }: ItemCardProps) {
                 ))
               ) : (
                 <CarouselItem>
-                  <div className="relative aspect-square bg-muted" />
+                  <div className="relative aspect-4/3 bg-muted" />
                 </CarouselItem>
               )}
             </CarouselContent>
@@ -163,7 +166,7 @@ export function ItemCard({ item }: ItemCardProps) {
 
           {/* Timer Overlay */}
           {item.is_accepting_bids && item.seconds_until_end && (
-            <div className="absolute bottom-2 left-2 right-2 bg-black/60 backdrop-blur-sm rounded px-2 py-1 flex items-center gap-1">
+            <div className="absolute bottom-2 left-2 right-2 bg-black/60 backdrop-blur-sm rounded px-2 py-1 flex items-center justify-center gap-1">
               <Clock className="size-3 text-white" />
               <span className="text-xs text-white font-medium">
                 {formatTimeRemaining(item.seconds_until_end)}
@@ -172,25 +175,29 @@ export function ItemCard({ item }: ItemCardProps) {
           )}
 
           {item.computed_status === 'scheduled' && item.seconds_until_start && (
-            <div className="absolute bottom-2 left-2 right-2 bg-black/60 backdrop-blur-sm rounded px-2 py-1 flex items-center gap-1">
+            <div className="absolute bottom-2 left-2 right-2 bg-black/60 backdrop-blur-sm rounded px-2 py-1 flex items-center justify-center gap-1">
               <Clock className="size-3 text-white" />
               <span className="text-xs text-white font-medium">
-                {formatTimeRemaining(item.seconds_until_start)}
+                Começa em {formatTimeRemaining(item.seconds_until_start)}
               </span>
             </div>
           )}
         </div>
 
         {/* Content */}
-        <div className="p-3 space-y-2">
-          <h3 className="font-semibold line-clamp-1 group-hover:text-primary transition-colors">
+        <div className="p-3 md:p-4 space-y-2">
+          <h3 className="font-semibold text-sm md:text-base line-clamp-1 group-hover:text-primary transition-colors">
             {item.title}
           </h3>
 
           {!isDonation && (
             <div className="flex items-baseline justify-between">
               <span className="text-xs text-muted-foreground">Lance atual</span>
-              <span className="text-lg font-bold text-primary">
+              <span
+                className={`text-base md:text-lg font-bold text-primary transition-all ${
+                  isNewBid ? 'scale-110 animate-pulse' : 'scale-100'
+                }`}
+              >
                 {formatCurrency(currentBid)}
               </span>
             </div>

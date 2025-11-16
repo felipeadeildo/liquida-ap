@@ -15,11 +15,11 @@ export default function ProtectedLayout() {
 
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <Spinner className="size-8 mx-auto" />
-          <p className="text-muted-foreground">Carregando...</p>
-        </div>
+      <div className="h-screen flex items-center justify-center flex-col gap-3 bg-background">
+        <Spinner className="size-8 mx-auto relative" />
+        <p className="text-muted-foreground text-sm font-medium">
+          Carregando...
+        </p>
       </div>
     )
   }
