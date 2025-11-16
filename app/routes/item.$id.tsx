@@ -1,23 +1,25 @@
-import { ArrowLeft, ChevronDown, Clock, Heart } from 'lucide-react'
+import confetti from 'canvas-confetti'
+import { ArrowLeft, ChevronDown } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
+import { AuctionStatusBadge } from '~/components/auction/auction-status-badge'
 import { BidChart } from '~/components/auction/bid-chart'
-import { ImageLightbox } from '~/components/auction/image-lightbox'
-import { SidebarGallery } from '~/components/auction/sidebar-gallery'
-import { StickyBidBar } from '~/components/auction/sticky-bid-bar'
-import { ThumbnailStrip } from '~/components/auction/thumbnail-strip'
-import { Badge } from '~/components/ui/badge'
+import { BidControlPanel } from '~/components/auction/bid-control-panel'
+import { BidLeaderboard } from '~/components/auction/bid-leaderboard'
+import { CountdownTimer } from '~/components/auction/countdown-timer'
+import { HeroCarousel } from '~/components/auction/hero-carousel'
+import { PresenceIndicator } from '~/components/auction/presence-indicator'
 import { Button } from '~/components/ui/button'
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '~/components/ui/collapsible'
-import { ScrollArea } from '~/components/ui/scroll-area'
 import { Spinner } from '~/components/ui/spinner'
 import { useAuth } from '~/lib/auth'
 import { supabase } from '~/lib/supabase'
+import { cn } from '~/lib/utils'
 import type { Tables } from '~/types/database'
 import type { Route } from './+types/item.$id'
 
@@ -33,34 +35,6 @@ function formatCurrency(value: number): string {
     style: 'currency',
     currency: 'BRL',
   }).format(value)
-}
-
-function formatTimeRemaining(seconds: number | null): string {
-  if (!seconds || seconds <= 0) return 'Encerrado'
-
-  const days = Math.floor(seconds / 86400)
-  const hours = Math.floor((seconds % 86400) / 3600)
-  const minutes = Math.floor((seconds % 3600) / 60)
-  const secs = Math.floor(seconds % 60)
-
-  if (days > 0) return `${days}d ${hours}h ${minutes}m`
-  if (hours > 0) return `${hours}h ${minutes}m ${secs}s`
-  if (minutes > 0) return `${minutes}m ${secs}s`
-  return `${secs}s`
-}
-
-function formatRelativeTime(date: string): string {
-  const now = new Date()
-  const then = new Date(date)
-  const diffMs = now.getTime() - then.getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-
-  if (diffMins < 1) return 'agora mesmo'
-  if (diffMins < 60) return `há ${diffMins}min`
-  const diffHours = Math.floor(diffMins / 60)
-  if (diffHours < 24) return `há ${diffHours}h`
-  const diffDays = Math.floor(diffHours / 24)
-  return `há ${diffDays}d`
 }
 
 export function meta({}: Route.MetaArgs) {
@@ -81,10 +55,7 @@ export default function ItemDetail() {
   const [currentBid, setCurrentBid] = useState(0)
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null)
   const [broadcastChannel, setBroadcastChannel] = useState<any>(null)
-  const [lightboxOpen, setLightboxOpen] = useState(false)
-  const [lightboxIndex, setLightboxIndex] = useState(0)
   const [chartOpen, setChartOpen] = useState(false)
-  const [historyOpen, setHistoryOpen] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -134,8 +105,19 @@ export default function ItemDetail() {
 
           const userName = bidUser?.name?.split(' ')[0] || 'Alguém'
           toast.info(
-            `${userName} deu um lance de ${formatCurrency(newBid.value)}! 💰`
+            `${userName} deu um lance de ${formatCurrency(newBid.value)}`
           )
+
+          // Play sound effect
+          try {
+            const audio = new Audio('/sounds/new-bid.mp3')
+            audio.volume = 0.2
+            audio.play().catch(() => {
+              // Ignore if sound fails to play
+            })
+          } catch {
+            // Ignore sound errors
+          }
         }
 
         fetchBids()
@@ -154,7 +136,7 @@ export default function ItemDetail() {
       supabase.removeChannel(channel)
       setBroadcastChannel(null)
     }
-  }, [id])
+  }, [id, user?.id])
 
   // Update countdown timer every second
   useEffect(() => {
@@ -228,7 +210,6 @@ export default function ItemDetail() {
         .eq('item_id', id)
         .eq('is_deleted', false)
         .order('value', { ascending: false })
-        .limit(10)
 
       if (error) throw error
 
@@ -279,7 +260,22 @@ export default function ItemDetail() {
 
       if (error) throw error
 
-      toast.success(`Lance de ${formatCurrency(bidAmount)} realizado! 🎉`)
+      toast.success(
+        `Lance de ${formatCurrency(bidAmount)} realizado com sucesso!`
+      )
+
+      // Check if user is now winning
+      const isNowWinning = bids.length === 0 || bidAmount > bids[0].value
+
+      if (isNowWinning) {
+        // Trigger confetti
+        confetti({
+          particleCount: 150,
+          spread: 80,
+          origin: { y: 0.6 },
+          colors: ['#FFD700', '#FFA500', '#FF6347'],
+        })
+      }
     } catch (err) {
       // Rollback on error
       setCurrentBid(previousState.bid)
@@ -287,11 +283,6 @@ export default function ItemDetail() {
       toast.error('Erro ao dar lance. Tente novamente.')
       throw err
     }
-  }
-
-  const handleImageClick = (index: number) => {
-    setLightboxIndex(index)
-    setLightboxOpen(true)
   }
 
   if (loading) {
@@ -316,8 +307,27 @@ export default function ItemDetail() {
   const isDonation = item.is_donation || false
   const minBid = currentBid + (item.bid_step || 1)
 
+  // Determine user's rank
+  let userRank: number | null = null
+  let isWinning = false
+  if (user && bids.length > 0) {
+    const userBidIndex = bids.findIndex((bid) => bid.user_id === user.id)
+    if (userBidIndex !== -1) {
+      userRank = userBidIndex + 1
+      isWinning = userBidIndex === 0
+    }
+  }
+
+  // Status for badges
+  const status =
+    item.computed_status === 'scheduled'
+      ? 'scheduled'
+      : item.is_accepting_bids
+        ? 'live'
+        : 'finished'
+
   return (
-    <div className="min-h-screen bg-background pb-32 lg:pb-0">
+    <div className="min-h-screen bg-background pb-32 lg:pb-8">
       {/* Header */}
       <header className="border-b bg-background sticky top-0 z-30">
         <div className="container mx-auto px-4 py-3">
@@ -330,209 +340,82 @@ export default function ItemDetail() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 md:px-6 py-4 md:py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-[160px_1fr] gap-6">
-          {/* Desktop Sidebar Gallery */}
-          <aside className="hidden lg:block">
-            <SidebarGallery
-              photos={item.photos || []}
-              onImageClick={handleImageClick}
-            />
-          </aside>
+        <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-6 lg:gap-8">
+          {/* Left Column - Hero Carousel (60% on desktop) */}
+          <div className="space-y-4">
+            <HeroCarousel photos={item.photos || []} />
 
-          {/* Main Column */}
-          <div className="space-y-4 md:space-y-6">
-            {/* Title + Status + Countdown */}
+            {/* Description - Desktop Only */}
+            <div className="hidden lg:block space-y-2">
+              <h2 className="text-lg font-semibold">Descrição</h2>
+              <p className="text-muted-foreground whitespace-pre-wrap">
+                {item.description}
+              </p>
+            </div>
+          </div>
+
+          {/* Right Column - Info & Controls (40% on desktop) */}
+          <div className="space-y-4">
+            {/* Title + Badges */}
             <div className="space-y-2">
-              <div className="flex items-start justify-between gap-2">
+              <div className="flex items-start justify-between gap-3">
                 <h1 className="text-2xl md:text-3xl font-bold flex-1">
                   {item.title}
                 </h1>
-                <div className="flex gap-1.5 flex-wrap justify-end">
-                  {item.computed_status === 'scheduled' && (
-                    <Badge variant="default" className="text-xs">
-                      Em Breve
-                    </Badge>
-                  )}
-                  {item.is_accepting_bids && (
-                    <Badge
-                      variant="destructive"
-                      className="animate-pulse text-xs"
-                    >
-                      Ao Vivo
-                    </Badge>
-                  )}
-                  {item.computed_status === 'finished' && (
-                    <Badge variant="secondary" className="text-xs">
-                      Encerrado
-                    </Badge>
-                  )}
-                  {isDonation && (
-                    <Badge variant="outline" className="text-xs">
-                      <Heart className="size-3 mr-1 fill-current" />
-                      Doação
-                    </Badge>
-                  )}
-                </div>
+                <AuctionStatusBadge
+                  status={status}
+                  isDonation={isDonation}
+                  seconds={timeRemaining}
+                />
               </div>
 
-              {/* Countdown Timer */}
-              {timeRemaining !== null && timeRemaining > 0 && (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Clock className="size-4" />
-                  <span className="text-sm font-medium">
-                    {item.is_accepting_bids
-                      ? `Termina em ${formatTimeRemaining(timeRemaining)}`
-                      : `Começa em ${formatTimeRemaining(timeRemaining)}`}
-                  </span>
-                </div>
-              )}
+              {/* Countdown + Presence */}
+              <div className="flex items-center gap-4 flex-wrap">
+                <CountdownTimer
+                  seconds={timeRemaining}
+                  isStartCountdown={status === 'scheduled'}
+                />
+                {item.is_accepting_bids && (
+                  <PresenceIndicator itemId={item.id || ''} />
+                )}
+              </div>
             </div>
 
-            {/* Current Bid - NO CARD */}
+            {/* Current Bid */}
             {!isDonation && (
-              <div className="space-y-1">
+              <div className="space-y-1 py-4 border-y">
                 <p className="text-sm text-muted-foreground">Lance atual</p>
                 <p className="text-4xl md:text-5xl font-bold text-primary">
                   {formatCurrency(currentBid)}
                 </p>
                 {item.is_accepting_bids && (
                   <p className="text-xs md:text-sm text-muted-foreground">
-                    Lance mínimo: {formatCurrency(minBid)}
+                    Próximo lance mínimo: {formatCurrency(minBid)}
                   </p>
                 )}
               </div>
             )}
 
-            {/* Mobile Thumbnail Strip */}
-            <div className="lg:hidden">
-              <ThumbnailStrip
-                photos={item.photos || []}
-                onImageClick={handleImageClick}
-              />
-            </div>
-
-            {/* Description - NO CARD */}
-            <div className="space-y-2">
-              <h2 className="text-lg font-semibold">Descrição</h2>
-              <p className="text-muted-foreground whitespace-pre-wrap">
-                {item.description}
-              </p>
-            </div>
-
-            {/* Collapsible Chart */}
-            {!isDonation && (
-              <Collapsible open={chartOpen} onOpenChange={setChartOpen}>
-                <CollapsibleTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-between"
-                    size="lg"
-                  >
-                    <span className="flex items-center gap-2">
-                      📊 Gráfico de Lances
-                    </span>
-                    <ChevronDown
-                      className={`size-4 transition-transform ${
-                        chartOpen ? 'rotate-180' : ''
-                      }`}
-                    />
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="mt-4">
-                  <BidChart
-                    itemId={item.id || ''}
-                    startingBid={item.starting_bid || 0}
-                  />
-                </CollapsibleContent>
-              </Collapsible>
-            )}
-
-            {/* Collapsible History */}
-            {!isDonation && bids.length > 0 && (
-              <Collapsible open={historyOpen} onOpenChange={setHistoryOpen}>
-                <CollapsibleTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-between"
-                    size="lg"
-                  >
-                    <span className="flex items-center gap-2">
-                      📜 Histórico de Lances
-                      <Badge variant="secondary" className="ml-2">
-                        {bids.length}
-                      </Badge>
-                    </span>
-                    <ChevronDown
-                      className={`size-4 transition-transform ${
-                        historyOpen ? 'rotate-180' : ''
-                      }`}
-                    />
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="mt-4">
-                  <ScrollArea className="h-[300px] border rounded-lg p-4">
-                    <div className="space-y-3">
-                      {bids.map((bid, index) => (
-                        <div
-                          key={bid.id}
-                          className="flex items-center justify-between py-2 border-b last:border-0"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={`size-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                                index === 0
-                                  ? 'bg-primary text-primary-foreground'
-                                  : 'bg-muted'
-                              }`}
-                            >
-                              #{index + 1}
-                            </div>
-                            <div>
-                              <p className="font-medium text-sm">
-                                {bid.users?.name || 'Anônimo'}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {bid.created_at
-                                  ? formatRelativeTime(bid.created_at)
-                                  : ''}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-bold text-base md:text-lg">
-                              {formatCurrency(bid.value)}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </CollapsibleContent>
-              </Collapsible>
-            )}
-
-            {/* Desktop Bid Form (not sticky, at bottom of content) */}
+            {/* Bid Controls - Desktop */}
             {item.is_accepting_bids && !isDonation && user && (
               <div className="hidden lg:block">
-                <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
-                  <h3 className="text-lg font-semibold">Fazer Lance</h3>
-                  <StickyBidBar
-                    minBid={minBid}
-                    bidStep={item.bid_step || 1}
-                    onPlaceBid={handlePlaceBid}
-                    disabled={!item.is_accepting_bids}
-                    className="relative border-0 p-0 shadow-none bg-transparent"
-                  />
-                </div>
+                <BidControlPanel
+                  minBid={minBid}
+                  bidStep={item.bid_step || 1}
+                  onPlaceBid={handlePlaceBid}
+                  disabled={!item.is_accepting_bids}
+                  userRank={userRank}
+                  isWinning={isWinning}
+                />
               </div>
             )}
 
-            {/* Login prompt for non-authenticated users */}
+            {/* Login Prompt - Desktop */}
             {!user && item.is_accepting_bids && (
               <div className="hidden lg:block">
                 <div className="border rounded-lg p-6 text-center space-y-4 bg-muted/30">
                   <p className="text-sm text-muted-foreground">
-                    Faça login para dar lances
+                    Faça login para participar do leilão
                   </p>
                   <Button
                     className="w-full max-w-xs"
@@ -543,19 +426,93 @@ export default function ItemDetail() {
                 </div>
               </div>
             )}
+
+            {/* Bid Leaderboard */}
+            {!isDonation && (
+              <BidLeaderboard
+                bids={bids}
+                currentUserId={user?.id}
+                limit={5}
+                className="hidden lg:block"
+              />
+            )}
+
+            {/* Mobile: Show top 3 bids */}
+            {!isDonation && (
+              <BidLeaderboard
+                bids={bids}
+                currentUserId={user?.id}
+                limit={3}
+                className="lg:hidden"
+              />
+            )}
+
+            {/* Chart - Desktop (always visible, compact) */}
+            {!isDonation && bids.length > 0 && (
+              <div className="hidden lg:block">
+                <BidChart
+                  itemId={item.id || ''}
+                  startingBid={item.starting_bid || 0}
+                  compact
+                />
+              </div>
+            )}
+
+            {/* Chart - Mobile (collapsible) */}
+            {!isDonation && bids.length > 0 && (
+              <div className="lg:hidden">
+                <Collapsible open={chartOpen} onOpenChange={setChartOpen}>
+                  <CollapsibleTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-between"
+                      size="lg"
+                    >
+                      <span>Gráfico de Evolução</span>
+                      <ChevronDown
+                        className={cn(
+                          'size-4 transition-transform',
+                          chartOpen ? 'rotate-180' : ''
+                        )}
+                      />
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-4">
+                    <BidChart
+                      itemId={item.id || ''}
+                      startingBid={item.starting_bid || 0}
+                    />
+                  </CollapsibleContent>
+                </Collapsible>
+              </div>
+            )}
+
+            {/* Description - Mobile Only */}
+            <div className="lg:hidden space-y-2 pt-2">
+              <h2 className="text-lg font-semibold">Descrição</h2>
+              <p className="text-muted-foreground whitespace-pre-wrap">
+                {item.description}
+              </p>
+            </div>
           </div>
         </div>
       </main>
 
       {/* Mobile Sticky Bid Bar */}
       {item.is_accepting_bids && !isDonation && user && (
-        <StickyBidBar
-          className="lg:hidden"
-          minBid={minBid}
-          bidStep={item.bid_step || 1}
-          onPlaceBid={handlePlaceBid}
-          disabled={!item.is_accepting_bids}
-        />
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-t shadow-2xl p-4">
+          <div className="container mx-auto max-w-2xl">
+            <BidControlPanel
+              minBid={minBid}
+              bidStep={item.bid_step || 1}
+              onPlaceBid={handlePlaceBid}
+              disabled={!item.is_accepting_bids}
+              userRank={userRank}
+              isWinning={isWinning}
+              className="shadow-none border-0"
+            />
+          </div>
+        </div>
       )}
 
       {/* Mobile Login Prompt Sticky */}
@@ -563,7 +520,7 @@ export default function ItemDetail() {
         <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-t shadow-2xl p-4">
           <div className="container mx-auto max-w-2xl space-y-2">
             <p className="text-sm text-center text-muted-foreground">
-              Faça login para dar lances
+              Faça login para participar do leilão
             </p>
             <Button
               className="w-full min-h-12"
@@ -574,14 +531,6 @@ export default function ItemDetail() {
           </div>
         </div>
       )}
-
-      {/* Image Lightbox */}
-      <ImageLightbox
-        photos={item.photos || []}
-        initialIndex={lightboxIndex}
-        isOpen={lightboxOpen}
-        onClose={() => setLightboxOpen(false)}
-      />
     </div>
   )
 }

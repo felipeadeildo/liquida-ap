@@ -15,6 +15,7 @@ import {
   ChartTooltipContent,
 } from '~/components/ui/chart'
 import { supabase } from '~/lib/supabase'
+import { cn } from '~/lib/utils'
 import type { Tables } from '~/types/database'
 
 type Bid = Tables<'bids'>
@@ -22,6 +23,8 @@ type Bid = Tables<'bids'>
 interface BidChartProps {
   itemId: string
   startingBid: number
+  compact?: boolean
+  className?: string
 }
 
 function formatCurrency(value: number): string {
@@ -43,7 +46,12 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function BidChart({ itemId, startingBid }: BidChartProps) {
+export function BidChart({
+  itemId,
+  startingBid,
+  compact = false,
+  className,
+}: BidChartProps) {
   const [bids, setBids] = useState<Bid[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -123,8 +131,101 @@ export function BidChart({ itemId, startingBid }: BidChartProps) {
   const trend =
     bids.length > 1 ? bids[bids.length - 1].value - bids[0].value : 0
 
+  const chartHeight = compact ? 'h-[150px]' : 'h-[200px]'
+
+  const chartElement = (
+    <ChartContainer config={chartConfig} className={cn(chartHeight, 'w-full')}>
+      <AreaChart
+        data={chartData}
+        margin={{
+          top: 10,
+          right: 10,
+          left: 0,
+          bottom: 0,
+        }}
+      >
+        <defs>
+          <linearGradient id="fillValue" x1="0" y1="0" x2="0" y2="1">
+            <stop
+              offset="5%"
+              stopColor="var(--color-value)"
+              stopOpacity={0.8}
+            />
+            <stop
+              offset="95%"
+              stopColor="var(--color-value)"
+              stopOpacity={0.1}
+            />
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+        <XAxis
+          dataKey="time"
+          tickLine={false}
+          axisLine={false}
+          tickMargin={8}
+          tick={{ fontSize: compact ? 10 : 12 }}
+          interval="preserveStartEnd"
+        />
+        <YAxis
+          tickLine={false}
+          axisLine={false}
+          tickMargin={8}
+          tick={{ fontSize: compact ? 10 : 12 }}
+          tickFormatter={(value) => `R$ ${(value / 1).toLocaleString('pt-BR')}`}
+          domain={[minValue * 0.95, maxValue * 1.05]}
+        />
+        <ChartTooltip
+          content={
+            <ChartTooltipContent
+              labelFormatter={(value, payload) => {
+                if (payload && payload[0]) {
+                  const data = payload[0].payload as any
+                  if (data.bidNumber) {
+                    return `Lance #${data.bidNumber}`
+                  }
+                }
+                return value
+              }}
+              formatter={(value) => formatCurrency(value as number)}
+            />
+          }
+        />
+        <Area
+          type="monotone"
+          dataKey="value"
+          stroke="var(--color-value)"
+          fill="url(#fillValue)"
+          strokeWidth={2}
+        />
+      </AreaChart>
+    </ChartContainer>
+  )
+
+  if (compact) {
+    return (
+      <div className={cn('space-y-2', className)}>
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+            <TrendingUp className="size-3.5" />
+            Evolução
+          </h3>
+          <p className="text-xs text-muted-foreground">
+            {bids.length} {bids.length === 1 ? 'lance' : 'lances'}
+            {trend > 0 && (
+              <span className="ml-1 text-primary font-medium">
+                +{formatCurrency(trend)}
+              </span>
+            )}
+          </p>
+        </div>
+        {chartElement}
+      </div>
+    )
+  }
+
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader className="pb-2 pt-4 px-4">
         <CardTitle className="text-lg flex items-center gap-2">
           <TrendingUp className="size-4" />
@@ -139,76 +240,7 @@ export function BidChart({ itemId, startingBid }: BidChartProps) {
           )}
         </CardDescription>
       </CardHeader>
-      <CardContent className="pb-4 px-4">
-        <ChartContainer config={chartConfig} className="h-[200px] w-full">
-          <AreaChart
-            data={chartData}
-            margin={{
-              top: 10,
-              right: 10,
-              left: 0,
-              bottom: 0,
-            }}
-          >
-            <defs>
-              <linearGradient id="fillValue" x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="5%"
-                  stopColor="var(--color-value)"
-                  stopOpacity={0.8}
-                />
-                <stop
-                  offset="95%"
-                  stopColor="var(--color-value)"
-                  stopOpacity={0.1}
-                />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis
-              dataKey="time"
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-              tick={{ fontSize: 12 }}
-              interval="preserveStartEnd"
-            />
-            <YAxis
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-              tick={{ fontSize: 12 }}
-              tickFormatter={(value) =>
-                `R$ ${(value / 1).toLocaleString('pt-BR')}`
-              }
-              domain={[minValue * 0.95, maxValue * 1.05]}
-            />
-            <ChartTooltip
-              content={
-                <ChartTooltipContent
-                  labelFormatter={(value, payload) => {
-                    if (payload && payload[0]) {
-                      const data = payload[0].payload as any
-                      if (data.bidNumber) {
-                        return `Lance #${data.bidNumber}`
-                      }
-                    }
-                    return value
-                  }}
-                  formatter={(value) => formatCurrency(value as number)}
-                />
-              }
-            />
-            <Area
-              type="monotone"
-              dataKey="value"
-              stroke="var(--color-value)"
-              fill="url(#fillValue)"
-              strokeWidth={2}
-            />
-          </AreaChart>
-        </ChartContainer>
-      </CardContent>
+      <CardContent className="pb-4 px-4">{chartElement}</CardContent>
     </Card>
   )
 }

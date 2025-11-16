@@ -12,13 +12,6 @@ import {
 } from '~/components/ui/dialog'
 import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '~/components/ui/select'
 import { Spinner } from '~/components/ui/spinner'
 import { Textarea } from '~/components/ui/textarea'
 import { supabase } from '~/lib/supabase'
@@ -30,7 +23,6 @@ type FormData = {
   starting_bid: string
   bid_step: string
   is_donation: boolean
-  status: 'draft' | 'scheduled' | 'active'
   auction_start: string
   auction_end: string
 }
@@ -46,7 +38,6 @@ export function CreateItemDialog() {
     starting_bid: '0',
     bid_step: '1',
     is_donation: false,
-    status: 'draft',
     auction_start: '',
     auction_end: '',
   })
@@ -58,7 +49,6 @@ export function CreateItemDialog() {
       starting_bid: '0',
       bid_step: '1',
       is_donation: false,
-      status: 'draft',
       auction_start: '',
       auction_end: '',
     })
@@ -125,12 +115,18 @@ export function CreateItemDialog() {
       return
     }
 
-    if (formData.status === 'scheduled') {
-      if (!formData.auction_start || !formData.auction_end) {
-        toast.error('Defina as datas de início e fim para itens agendados')
-        return
-      }
+    // Validate dates if provided
+    const hasStart = formData.auction_start.trim() !== ''
+    const hasEnd = formData.auction_end.trim() !== ''
 
+    if (hasStart !== hasEnd) {
+      toast.error(
+        'Defina tanto a data de início quanto a de fim, ou deixe ambas em branco'
+      )
+      return
+    }
+
+    if (hasStart && hasEnd) {
       if (new Date(formData.auction_start) >= new Date(formData.auction_end)) {
         toast.error('A data de início deve ser anterior à data de fim')
         return
@@ -149,8 +145,9 @@ export function CreateItemDialog() {
       toast.loading('Salvando item...', { id: loadingToast })
 
       // Convert datetime-local (browser timezone) to UTC ISO string
-      const convertToUTC = (localDateTimeString: string | null) => {
-        if (!localDateTimeString) return null
+      const convertToUTC = (localDateTimeString: string) => {
+        if (!localDateTimeString || localDateTimeString.trim() === '')
+          return null
         // datetime-local gives us a string like "2025-11-15T12:16"
         // We create a Date object which interprets it as local time
         const localDate = new Date(localDateTimeString)
@@ -165,15 +162,8 @@ export function CreateItemDialog() {
         starting_bid: parseFloat(formData.starting_bid),
         bid_step: parseFloat(formData.bid_step),
         is_donation: formData.is_donation,
-        status: formData.status,
-        auction_start:
-          formData.status === 'scheduled'
-            ? convertToUTC(formData.auction_start)
-            : null,
-        auction_end:
-          formData.status === 'scheduled'
-            ? convertToUTC(formData.auction_end)
-            : null,
+        auction_start: convertToUTC(formData.auction_start),
+        auction_end: convertToUTC(formData.auction_end),
       })
 
       if (error) throw error
@@ -277,52 +267,38 @@ export function CreateItemDialog() {
             </Label>
           </div>
 
-          {/* Status */}
+          {/* Scheduling (optional) */}
           <div className="space-y-2">
-            <Label htmlFor="status">Status *</Label>
-            <Select
-              value={formData.status}
-              onValueChange={(value) => handleChange('status', value)}
-            >
-              <SelectTrigger id="status">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="draft">Rascunho</SelectItem>
-                <SelectItem value="scheduled">Agendado</SelectItem>
-                <SelectItem value="active">Ativo</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label className="text-base font-semibold">
+              Agendamento do Leilão (Opcional)
+            </Label>
+            <p className="text-sm text-muted-foreground">
+              Deixe em branco para criar um rascunho. Preencha ambas as datas
+              para agendar o leilão.
+            </p>
           </div>
 
-          {/* Scheduling */}
-          {formData.status === 'scheduled' && (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="auction_start">Início do Leilão *</Label>
-                <Input
-                  id="auction_start"
-                  type="datetime-local"
-                  value={formData.auction_start}
-                  onChange={(e) =>
-                    handleChange('auction_start', e.target.value)
-                  }
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="auction_end">Fim do Leilão *</Label>
-                <Input
-                  id="auction_end"
-                  type="datetime-local"
-                  value={formData.auction_end}
-                  onChange={(e) => handleChange('auction_end', e.target.value)}
-                  required
-                />
-              </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="auction_start">Início do Leilão</Label>
+              <Input
+                id="auction_start"
+                type="datetime-local"
+                value={formData.auction_start}
+                onChange={(e) => handleChange('auction_start', e.target.value)}
+              />
             </div>
-          )}
+
+            <div className="space-y-2">
+              <Label htmlFor="auction_end">Fim do Leilão</Label>
+              <Input
+                id="auction_end"
+                type="datetime-local"
+                value={formData.auction_end}
+                onChange={(e) => handleChange('auction_end', e.target.value)}
+              />
+            </div>
+          </div>
 
           {/* Submit */}
           <div className="flex gap-4 pt-4">

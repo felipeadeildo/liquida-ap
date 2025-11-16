@@ -83,7 +83,6 @@ export type Database = {
           photos: string[]
           proof_url: string | null
           starting_bid: number | null
-          status: Database['public']['Enums']['item_status'] | null
           title: string
         }
         Insert: {
@@ -98,7 +97,6 @@ export type Database = {
           photos: string[]
           proof_url?: string | null
           starting_bid?: number | null
-          status?: Database['public']['Enums']['item_status'] | null
           title: string
         }
         Update: {
@@ -113,7 +111,6 @@ export type Database = {
           photos?: string[]
           proof_url?: string | null
           starting_bid?: number | null
-          status?: Database['public']['Enums']['item_status'] | null
           title?: string
         }
         Relationships: []
@@ -199,8 +196,43 @@ export type Database = {
           seconds_until_end: number | null
           seconds_until_start: number | null
           starting_bid: number | null
-          status: Database['public']['Enums']['item_status'] | null
           title: string | null
+        }
+        Insert: {
+          auction_end?: string | null
+          auction_start?: string | null
+          bid_step?: number | null
+          computed_status?: never
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          is_accepting_bids?: never
+          is_donation?: boolean | null
+          payment_status?: Database['public']['Enums']['payment_status'] | null
+          photos?: string[] | null
+          proof_url?: string | null
+          seconds_until_end?: never
+          seconds_until_start?: never
+          starting_bid?: number | null
+          title?: string | null
+        }
+        Update: {
+          auction_end?: string | null
+          auction_start?: string | null
+          bid_step?: number | null
+          computed_status?: never
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          is_accepting_bids?: never
+          is_donation?: boolean | null
+          payment_status?: Database['public']['Enums']['payment_status'] | null
+          photos?: string[] | null
+          proof_url?: string | null
+          seconds_until_end?: never
+          seconds_until_start?: never
+          starting_bid?: number | null
+          title?: string | null
         }
         Relationships: []
       }
