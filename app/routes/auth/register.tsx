@@ -72,10 +72,13 @@ export default function Register() {
     const loadingToast = toast.loading('Criando sua conta...')
 
     try {
+      const redirectUrl = `${window.location.origin}/login`
+
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
+          emailRedirectTo: redirectUrl,
           data: {
             name: formData.name,
             whatsapp: formData.whatsapp,

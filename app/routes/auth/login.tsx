@@ -31,6 +31,16 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
+    const hashParams = new URLSearchParams(window.location.hash.substring(1))
+    const type = hashParams.get('type')
+
+    if (type === 'signup') {
+      toast.success('Email confirmado! Faça login para continuar.')
+      window.history.replaceState(null, '', window.location.pathname)
+    }
+  }, [])
+
+  useEffect(() => {
     if (!authLoading && user) {
       navigate('/', { replace: true })
     }
