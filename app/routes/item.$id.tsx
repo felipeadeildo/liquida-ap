@@ -208,11 +208,11 @@ export default function ItemDetail() {
 
       setBids(data || [])
 
-      // Update current bid
+      // Update current bid - only set if there are bids
       if (data && data.length > 0) {
         setCurrentBid(data[0].value)
-      } else if (item) {
-        setCurrentBid(item.starting_bid || 0)
+      } else {
+        setCurrentBid(0)
       }
     } catch (err) {
       console.error('Error fetching bids:', err)
@@ -222,7 +222,11 @@ export default function ItemDetail() {
   const handlePlaceBid = async (bidAmount: number) => {
     if (!item || !item.id || !user) return
 
-    const minBid = currentBid + (item.bid_step || 1)
+    // If no bids, minimum is starting_bid. Otherwise, current bid + step
+    const minBid =
+      bids.length === 0
+        ? item.starting_bid || 0
+        : currentBid + (item.bid_step || 1)
 
     if (bidAmount < minBid) {
       toast.error(`Lance mínimo: ${formatCurrency(minBid)}`)
@@ -298,7 +302,11 @@ export default function ItemDetail() {
   }
 
   const isDonation = item.is_donation || false
-  const minBid = currentBid + (item.bid_step || 1)
+  // If no bids, minimum is starting_bid. Otherwise, current bid + step
+  const minBid =
+    bids.length === 0
+      ? item.starting_bid || 0
+      : currentBid + (item.bid_step || 1)
 
   // Determine user's rank
   let userRank: number | null = null
@@ -377,13 +385,21 @@ export default function ItemDetail() {
             {/* Current Bid */}
             {!isDonation && (
               <div className="space-y-0.5 py-3 border-y">
-                <p className="text-xs text-muted-foreground">Lance atual</p>
+                <p className="text-xs text-muted-foreground">
+                  {bids.length === 0 ? 'Lance inicial' : 'Lance atual'}
+                </p>
                 <p className="text-3xl md:text-4xl font-bold text-primary">
-                  {formatCurrency(currentBid)}
+                  {formatCurrency(
+                    bids.length === 0
+                      ? item.starting_bid || 0
+                      : currentBid
+                  )}
                 </p>
                 {item.is_accepting_bids && (
                   <p className="text-[10px] md:text-xs text-muted-foreground">
-                    Próximo mínimo: {formatCurrency(minBid)}
+                    {bids.length === 0
+                      ? `Lance mínimo: ${formatCurrency(minBid)}`
+                      : `Próximo mínimo: ${formatCurrency(minBid)}`}
                   </p>
                 )}
               </div>
