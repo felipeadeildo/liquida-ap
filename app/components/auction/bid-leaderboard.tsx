@@ -6,8 +6,9 @@ import { cn } from '~/lib/utils'
 import type { Tables } from '~/types/database'
 
 type Bid = Tables<'bids'> & {
-  users: {
-    name: string
+  users_public: {
+    id: string | null
+    name: string | null
   } | null
 }
 
@@ -127,7 +128,7 @@ export function BidLeaderboard({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
                           <p className="font-semibold text-xs truncate">
-                            {bid.users?.name?.split(' ')[0] || 'Anônimo'}
+                            {bid.users_public?.name?.split(' ')[0] || 'Anônimo'}
                           </p>
                           {isCurrentUser && (
                             <span className="text-[10px] font-medium text-primary">

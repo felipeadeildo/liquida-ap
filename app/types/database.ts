@@ -68,6 +68,13 @@ export type Database = {
             referencedRelation: 'users'
             referencedColumns: ['id']
           },
+          {
+            foreignKeyName: 'bids_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'users_public'
+            referencedColumns: ['id']
+          },
         ]
       }
       donation_claims: {
@@ -128,6 +135,70 @@ export type Database = {
             columns: ['user_id']
             isOneToOne: false
             referencedRelation: 'users'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'donation_claims_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'users_public'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      item_watch: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'item_watch_item_id_fkey'
+            columns: ['item_id']
+            isOneToOne: false
+            referencedRelation: 'finishes'
+            referencedColumns: ['item_id']
+          },
+          {
+            foreignKeyName: 'item_watch_item_id_fkey'
+            columns: ['item_id']
+            isOneToOne: false
+            referencedRelation: 'items'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'item_watch_item_id_fkey'
+            columns: ['item_id']
+            isOneToOne: false
+            referencedRelation: 'items_with_status'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'item_watch_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'users'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'item_watch_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'users_public'
             referencedColumns: ['id']
           },
         ]
@@ -239,6 +310,13 @@ export type Database = {
             referencedRelation: 'users'
             referencedColumns: ['id']
           },
+          {
+            foreignKeyName: 'bids_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'users_public'
+            referencedColumns: ['id']
+          },
         ]
       }
       items_with_status: {
@@ -295,6 +373,36 @@ export type Database = {
           seconds_until_start?: never
           starting_bid?: number | null
           title?: string | null
+        }
+        Relationships: []
+      }
+      users_public: {
+        Row: {
+          course: string | null
+          created_at: string | null
+          id: string | null
+          is_insper: boolean | null
+          name: string | null
+          photo: string | null
+          semester: string | null
+        }
+        Insert: {
+          course?: string | null
+          created_at?: string | null
+          id?: string | null
+          is_insper?: boolean | null
+          name?: string | null
+          photo?: string | null
+          semester?: string | null
+        }
+        Update: {
+          course?: string | null
+          created_at?: string | null
+          id?: string | null
+          is_insper?: boolean | null
+          name?: string | null
+          photo?: string | null
+          semester?: string | null
         }
         Relationships: []
       }

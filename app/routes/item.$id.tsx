@@ -1,5 +1,5 @@
 import confetti from 'canvas-confetti'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Bell, BellOff } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
@@ -20,8 +20,9 @@ import type { Route } from './+types/item.$id'
 
 type ItemWithStatus = Tables<'items_with_status'>
 type Bid = Tables<'bids'> & {
-  users: {
-    name: string
+  users_public: {
+    id: string | null
+    name: string | null
   } | null
 }
 type DonationClaim = Tables<'donation_claims'>
@@ -54,6 +55,8 @@ export default function ItemDetail() {
   const [donationClaim, setDonationClaim] = useState<DonationClaim | null>(null)
   const [isAlreadyClaimed, setIsAlreadyClaimed] = useState(false)
   const [participantCount, setParticipantCount] = useState(0)
+  const [isWatching, setIsWatching] = useState(false)
+  const [watchLoading, setWatchLoading] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -96,7 +99,7 @@ export default function ItemDetail() {
         if (newBid.user_id !== user?.id) {
           // Fetch user name for toast
           const { data: bidUser } = await supabase
-            .from('users')
+            .from('users_public')
             .select('name')
             .eq('id', newBid.user_id)
             .single()
@@ -200,6 +203,31 @@ export default function ItemDetail() {
     }
   }, [item?.is_donation, user?.id, id])
 
+  // Fetch watch status when user and item are loaded
+  useEffect(() => {
+    if (user && id) {
+      fetchWatchStatus()
+    }
+  }, [user?.id, id])
+
+  const fetchWatchStatus = async () => {
+    if (!user || !id) return
+
+    try {
+      const { data, error } = await supabase
+        .from('item_watch')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('item_id', id)
+        .maybeSingle()
+
+      if (error) throw error
+      setIsWatching(!!data)
+    } catch (err) {
+      console.error('Error fetching watch status:', err)
+    }
+  }
+
   const fetchItem = async () => {
     if (!id) return
 
@@ -223,20 +251,36 @@ export default function ItemDetail() {
     if (!id) return
 
     try {
-      const { data, error } = await supabase
+      // Fetch bids
+      const { data: bidsData, error: bidsError } = await supabase
         .from('bids')
-        .select('*, users(name)')
+        .select('*')
         .eq('item_id', id)
         .eq('is_deleted', false)
         .order('value', { ascending: false })
 
-      if (error) throw error
+      if (bidsError) throw bidsError
 
-      setBids(data || [])
+      // Fetch user names separately from public view
+      const userIds = [...new Set(bidsData?.map((b) => b.user_id) || [])]
+      const { data: usersData } = await supabase
+        .from('users_public')
+        .select('id, name')
+        .in('id', userIds)
+
+      // Map user names to bids
+      const usersMap = new Map(usersData?.map((u) => [u.id, u]) || [])
+      const bidsWithUsers =
+        bidsData?.map((bid) => ({
+          ...bid,
+          users_public: usersMap.get(bid.user_id) || null,
+        })) || []
+
+      setBids(bidsWithUsers)
 
       // Update current bid - only set if there are bids
-      if (data && data.length > 0) {
-        setCurrentBid(data[0].value)
+      if (bidsWithUsers && bidsWithUsers.length > 0) {
+        setCurrentBid(bidsWithUsers[0].value)
       } else {
         setCurrentBid(0)
       }
@@ -316,7 +360,10 @@ export default function ItemDetail() {
       value: bidAmount,
       is_deleted: false,
       created_at: new Date().toISOString(),
-      users: { name: profile?.name || 'Você' },
+      users_public: {
+        id: user.id,
+        name: profile?.name || 'Você',
+      },
     }
 
     const previousState = { bid: currentBid, bids }
@@ -383,6 +430,44 @@ export default function ItemDetail() {
     }
   }
 
+  const handleToggleWatch = async () => {
+    if (!item || !item.id || !user) return
+
+    setWatchLoading(true)
+
+    try {
+      if (isWatching) {
+        // Unwatch - remove from item_watch
+        const { error } = await supabase
+          .from('item_watch')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('item_id', item.id)
+
+        if (error) throw error
+
+        setIsWatching(false)
+        toast.success('Você não receberá mais notificações deste item')
+      } else {
+        // Watch - add to item_watch
+        const { error } = await supabase.from('item_watch').insert({
+          user_id: user.id,
+          item_id: item.id,
+        })
+
+        if (error) throw error
+
+        setIsWatching(true)
+        toast.success('Você receberá emails quando for superado neste item!')
+      }
+    } catch (err: any) {
+      toast.error('Erro ao atualizar notificações. Tente novamente.')
+      console.error('Error toggling watch:', err)
+    } finally {
+      setWatchLoading(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -432,11 +517,32 @@ export default function ItemDetail() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-background sticky top-0 z-30">
-        <div className="container mx-auto px-4 py-3">
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <Button variant="ghost" size="sm" onClick={() => navigate('/')}>
             <ArrowLeft className="size-4 mr-2" />
             Voltar
           </Button>
+          {user && !isDonation && (
+            <Button
+              variant={isWatching ? 'default' : 'outline'}
+              size="sm"
+              onClick={handleToggleWatch}
+              disabled={watchLoading}
+              className="gap-2"
+            >
+              {isWatching ? (
+                <>
+                  <Bell className="size-4" />
+                  <span className="hidden sm:inline">Notificando</span>
+                </>
+              ) : (
+                <>
+                  <BellOff className="size-4" />
+                  <span className="hidden sm:inline">Notificar</span>
+                </>
+              )}
+            </Button>
+          )}
         </div>
       </header>
 
