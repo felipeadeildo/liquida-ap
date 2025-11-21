@@ -7,6 +7,7 @@ import { AuctionStatusBadge } from '~/components/auction/auction-status-badge'
 import { BidControlPanel } from '~/components/auction/bid-control-panel'
 import { BidLeaderboard } from '~/components/auction/bid-leaderboard'
 import { CountdownTimer } from '~/components/auction/countdown-timer'
+import { DonationClaimPanel } from '~/components/auction/donation-claim-panel'
 import { HeroCarousel } from '~/components/auction/hero-carousel'
 import { PresenceIndicator } from '~/components/auction/presence-indicator'
 import { Button } from '~/components/ui/button'
@@ -23,6 +24,7 @@ type Bid = Tables<'bids'> & {
     name: string
   } | null
 }
+type DonationClaim = Tables<'donation_claims'>
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('pt-BR', {
@@ -49,6 +51,11 @@ export default function ItemDetail() {
   const [currentBid, setCurrentBid] = useState(0)
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null)
   const [broadcastChannel, setBroadcastChannel] = useState<any>(null)
+  const [donationClaim, setDonationClaim] = useState<DonationClaim | null>(
+    null
+  )
+  const [isAlreadyClaimed, setIsAlreadyClaimed] = useState(false)
+  const [participantCount, setParticipantCount] = useState(0)
 
   useEffect(() => {
     if (!id) return
@@ -122,6 +129,20 @@ export default function ItemDetail() {
       fetchItem()
     })
 
+    // Listen to donation claim changes
+    channel.on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'donation_claims',
+        filter: `item_id=eq.${id}`,
+      },
+      () => {
+        fetchDonationClaims()
+      }
+    )
+
     channel.subscribe()
     setBroadcastChannel(channel)
 
@@ -174,6 +195,13 @@ export default function ItemDetail() {
     return () => clearInterval(interval)
   }, [item, broadcastChannel])
 
+  // Fetch donation claims when item is loaded and is a donation
+  useEffect(() => {
+    if (item?.is_donation) {
+      fetchDonationClaims()
+    }
+  }, [item?.is_donation, user?.id, id])
+
   const fetchItem = async () => {
     if (!id) return
 
@@ -216,6 +244,55 @@ export default function ItemDetail() {
       }
     } catch (err) {
       console.error('Error fetching bids:', err)
+    }
+  }
+
+  const fetchDonationClaims = async () => {
+    if (!id) return
+
+    try {
+      // Get all claims for this item
+      const { data: allClaims, error: allError } = await supabase
+        .from('donation_claims')
+        .select('*')
+        .eq('item_id', id)
+
+      if (allError) throw allError
+
+      // Count pending participants (only those who are still in the running)
+      const pendingCount =
+        allClaims?.filter((claim) => claim.status === 'pending').length || 0
+      setParticipantCount(pendingCount)
+
+      // Check if someone else already has an approved/delivered claim
+      const approvedByOther = allClaims?.find(
+        (claim) =>
+          (claim.status === 'approved' || claim.status === 'delivered') &&
+          claim.user_id !== user?.id
+      )
+
+      if (approvedByOther) {
+        setIsAlreadyClaimed(true)
+        setDonationClaim(null)
+        return
+      }
+
+      // Get user's own claim if exists
+      if (user) {
+        const { data: userClaim, error: userError } = await supabase
+          .from('donation_claims')
+          .select('*')
+          .eq('item_id', id)
+          .eq('user_id', user.id)
+          .maybeSingle()
+
+        if (userError) throw userError
+        setDonationClaim(userClaim)
+      }
+
+      setIsAlreadyClaimed(false)
+    } catch (err) {
+      console.error('Error fetching donation claims:', err)
     }
   }
 
@@ -278,6 +355,32 @@ export default function ItemDetail() {
       setCurrentBid(previousState.bid)
       setBids(previousState.bids)
       toast.error('Erro ao dar lance. Tente novamente.')
+      throw err
+    }
+  }
+
+  const handleClaimDonation = async () => {
+    if (!item || !item.id || !user) return
+
+    try {
+      const { error } = await supabase.from('donation_claims').insert({
+        item_id: item.id,
+        user_id: user.id,
+        status: 'pending',
+      })
+
+      if (error) throw error
+
+      toast.success('Você entrou no sorteio!')
+
+      // Refetch claims
+      await fetchDonationClaims()
+    } catch (err: any) {
+      if (err?.message?.includes('duplicate key')) {
+        toast.error('Você já está participando deste sorteio.')
+      } else {
+        toast.error('Erro ao entrar no sorteio. Tente novamente.')
+      }
       throw err
     }
   }
@@ -419,12 +522,38 @@ export default function ItemDetail() {
               </div>
             )}
 
+            {/* Donation Claim Panel - Desktop */}
+            {isDonation && user && (
+              <div className="hidden lg:block">
+                <DonationClaimPanel
+                  onClaim={handleClaimDonation}
+                  disabled={!item.is_accepting_bids}
+                  existingClaim={
+                    donationClaim
+                      ? {
+                          status: donationClaim.status as
+                            | 'pending'
+                            | 'approved'
+                            | 'rejected'
+                            | 'delivered',
+                          created_at: donationClaim.created_at,
+                        }
+                      : null
+                  }
+                  isAlreadyClaimed={isAlreadyClaimed}
+                  participantCount={participantCount}
+                />
+              </div>
+            )}
+
             {/* Login Prompt - Desktop */}
             {!user && item.is_accepting_bids && (
               <div className="hidden lg:block">
                 <div className="border rounded-lg p-4 text-center space-y-3 bg-muted/30">
                   <p className="text-xs text-muted-foreground">
-                    Faça login para participar do leilão
+                    {isDonation
+                      ? 'Faça login para participar do sorteio'
+                      : 'Faça login para participar do leilão'}
                   </p>
                   <Button
                     size="sm"
@@ -485,12 +614,41 @@ export default function ItemDetail() {
         </div>
       )}
 
+      {/* Mobile Sticky Donation Panel */}
+      {isDonation && user && (
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background border-t shadow-2xl p-2">
+          <div className="container mx-auto max-w-2xl">
+            <DonationClaimPanel
+              onClaim={handleClaimDonation}
+              disabled={!item.is_accepting_bids}
+              existingClaim={
+                donationClaim
+                  ? {
+                      status: donationClaim.status as
+                        | 'pending'
+                        | 'approved'
+                        | 'rejected'
+                        | 'delivered',
+                      created_at: donationClaim.created_at,
+                    }
+                  : null
+              }
+              isAlreadyClaimed={isAlreadyClaimed}
+              participantCount={participantCount}
+              className="shadow-none border-0"
+            />
+          </div>
+        </div>
+      )}
+
       {/* Mobile Login Prompt Sticky */}
       {!user && item.is_accepting_bids && (
         <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background border-t shadow-2xl p-3">
           <div className="container mx-auto max-w-2xl space-y-1.5">
             <p className="text-xs text-center text-muted-foreground">
-              Faça login para participar do leilão
+              {isDonation
+                ? 'Faça login para participar do sorteio'
+                : 'Faça login para participar do leilão'}
             </p>
             <Button
               size="sm"

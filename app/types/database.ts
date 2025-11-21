@@ -70,6 +70,68 @@ export type Database = {
           },
         ]
       }
+      donation_claims: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          id: string
+          item_id: string
+          message: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          id?: string
+          item_id: string
+          message?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          id?: string
+          item_id?: string
+          message?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'donation_claims_item_id_fkey'
+            columns: ['item_id']
+            isOneToOne: false
+            referencedRelation: 'finishes'
+            referencedColumns: ['item_id']
+          },
+          {
+            foreignKeyName: 'donation_claims_item_id_fkey'
+            columns: ['item_id']
+            isOneToOne: false
+            referencedRelation: 'items'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'donation_claims_item_id_fkey'
+            columns: ['item_id']
+            isOneToOne: false
+            referencedRelation: 'items_with_status'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'donation_claims_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'users'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       items: {
         Row: {
           auction_end: string | null
