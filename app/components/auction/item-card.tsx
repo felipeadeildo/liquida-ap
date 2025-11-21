@@ -1,4 +1,4 @@
-import { Clock, Heart } from 'lucide-react'
+import { Clock, Heart, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { Badge } from '~/components/ui/badge'
@@ -41,6 +41,8 @@ function formatTimeRemaining(seconds: number | null): string {
 export function ItemCard({ item }: ItemCardProps) {
   const [currentBid, setCurrentBid] = useState<number>(item.starting_bid || 0)
   const [isNewBid, setIsNewBid] = useState(false)
+  const [participantCount, setParticipantCount] = useState(0)
+  const [hasBids, setHasBids] = useState(false)
   const isDonation = item.is_donation || false
 
   useEffect(() => {
@@ -48,7 +50,43 @@ export function ItemCard({ item }: ItemCardProps) {
 
     const itemId = item.id
 
-    // Fetch latest bid
+    // For donations, fetch participant count
+    if (isDonation) {
+      const fetchParticipants = async () => {
+        const { data } = await supabase
+          .from('donation_claims')
+          .select('id')
+          .eq('item_id', itemId)
+          .eq('status', 'pending')
+
+        setParticipantCount(data?.length || 0)
+      }
+
+      fetchParticipants()
+
+      // Subscribe to donation claims changes
+      const channel = supabase
+        .channel(`item-donations:${itemId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'donation_claims',
+            filter: `item_id=eq.${itemId}`,
+          },
+          () => {
+            fetchParticipants()
+          }
+        )
+        .subscribe()
+
+      return () => {
+        supabase.removeChannel(channel)
+      }
+    }
+
+    // For auctions, fetch latest bid
     const fetchLatestBid = async () => {
       const { data } = await supabase
         .from('bids')
@@ -60,8 +98,10 @@ export function ItemCard({ item }: ItemCardProps) {
 
       if (data && data.length > 0) {
         setCurrentBid(data[0].value)
+        setHasBids(true)
       } else {
         setCurrentBid(item.starting_bid || 0)
+        setHasBids(false)
       }
     }
 
@@ -81,6 +121,7 @@ export function ItemCard({ item }: ItemCardProps) {
         (payload: any) => {
           if (payload.new?.value && !payload.new?.is_deleted) {
             setCurrentBid(payload.new.value)
+            setHasBids(true)
             setIsNewBid(true)
             setTimeout(() => setIsNewBid(false), 2000)
           }
@@ -91,11 +132,17 @@ export function ItemCard({ item }: ItemCardProps) {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [item.id, item.starting_bid])
+  }, [item.id, item.starting_bid, isDonation])
 
   return (
     <Link to={`/item/${item.id}`}>
-      <Card className="overflow-hidden hover:shadow-lg transition-all hover:-translate-y-1 cursor-pointer group">
+      <Card
+        className={`overflow-hidden hover:shadow-lg transition-all hover:-translate-y-1 cursor-pointer group ${
+          isDonation
+            ? 'border-primary/30 bg-linear-to-br from-primary/5 to-transparent'
+            : ''
+        }`}
+      >
         {/* Image Carousel */}
         <div className="relative">
           <Carousel className="w-full">
@@ -155,11 +202,11 @@ export function ItemCard({ item }: ItemCardProps) {
           {isDonation && (
             <div className="absolute top-2 right-2">
               <Badge
-                variant="outline"
-                className="text-xs bg-background/80 backdrop-blur"
+                variant="default"
+                className="text-xs bg-primary/90 backdrop-blur"
               >
                 <Heart className="size-3 mr-1 fill-current" />
-                Doação
+                Sorteio
               </Badge>
             </div>
           )}
@@ -191,14 +238,36 @@ export function ItemCard({ item }: ItemCardProps) {
           </h3>
 
           {!isDonation && (
-            <div className="flex items-baseline justify-between">
-              <span className="text-xs text-muted-foreground">Lance atual</span>
-              <span
-                className={`text-base md:text-lg font-bold text-primary transition-all ${
-                  isNewBid ? 'scale-110 animate-pulse' : 'scale-100'
-                }`}
-              >
-                {formatCurrency(currentBid)}
+            <div className="space-y-1">
+              <div className="flex items-baseline justify-between">
+                <span className="text-xs text-muted-foreground">
+                  {hasBids ? 'Lance atual' : 'Lance mínimo'}
+                </span>
+                <span
+                  className={`text-base md:text-lg font-bold text-primary transition-all ${
+                    isNewBid ? 'scale-110 animate-pulse' : 'scale-100'
+                  }`}
+                >
+                  {formatCurrency(currentBid)}
+                </span>
+              </div>
+              <p className="text-[10px] text-muted-foreground text-center min-h-[14px]">
+                {!hasBids && 'Sem lances ainda'}
+              </p>
+            </div>
+          )}
+
+          {isDonation && (
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <Users className="size-4" />
+                <span className="text-xs">Participando</span>
+              </div>
+              <span className="text-base md:text-lg font-bold text-primary">
+                {participantCount}
+                <span className="text-xs font-normal text-muted-foreground ml-1">
+                  {participantCount === 1 ? 'pessoa' : 'pessoas'}
+                </span>
               </span>
             </div>
           )}

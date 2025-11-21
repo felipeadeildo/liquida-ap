@@ -51,9 +51,7 @@ export default function ItemDetail() {
   const [currentBid, setCurrentBid] = useState(0)
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null)
   const [broadcastChannel, setBroadcastChannel] = useState<any>(null)
-  const [donationClaim, setDonationClaim] = useState<DonationClaim | null>(
-    null
-  )
+  const [donationClaim, setDonationClaim] = useState<DonationClaim | null>(null)
   const [isAlreadyClaimed, setIsAlreadyClaimed] = useState(false)
   const [participantCount, setParticipantCount] = useState(0)
 
@@ -493,9 +491,7 @@ export default function ItemDetail() {
                 </p>
                 <p className="text-3xl md:text-4xl font-bold text-primary">
                   {formatCurrency(
-                    bids.length === 0
-                      ? item.starting_bid || 0
-                      : currentBid
+                    bids.length === 0 ? item.starting_bid || 0 : currentBid
                   )}
                 </p>
                 {item.is_accepting_bids && (
