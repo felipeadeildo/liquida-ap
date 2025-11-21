@@ -7,6 +7,13 @@ import { ItemsList } from '~/components/auction/items-list'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '~/components/ui/select'
 import { useAuth } from '~/lib/auth'
 import { supabase } from '~/lib/supabase'
 import type { Tables } from '~/types/database'
@@ -15,6 +22,12 @@ import type { Route } from './+types/home'
 type ItemWithStatus = Tables<'items_with_status'>
 type StatusFilter = 'all' | 'active' | 'scheduled' | 'finished'
 type TypeFilter = 'all' | 'auction' | 'donation'
+type SortOrder =
+  | 'ending_soon'
+  | 'most_popular'
+  | 'lowest_price'
+  | 'highest_price'
+  | 'newest'
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -32,6 +45,7 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
+  const [sortOrder, setSortOrder] = useState<SortOrder>('ending_soon')
 
   const handleSignOut = async () => {
     await signOut()
@@ -58,14 +72,11 @@ export default function Home() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [searchQuery, statusFilter, typeFilter])
+  }, [searchQuery, statusFilter, typeFilter, sortOrder])
 
   const fetchItems = async () => {
     try {
-      let query = supabase
-        .from('items_with_status')
-        .select('*')
-        .order('created_at', { ascending: false })
+      let query = supabase.from('items_with_status').select('*')
 
       // Don't show finished items by default
       if (statusFilter === 'all') {
@@ -96,7 +107,61 @@ export default function Home() {
 
       if (error) throw error
 
-      setItems(data || [])
+      // Get bid counts for sorting by popularity
+      let itemsData = data || []
+
+      if (sortOrder === 'most_popular') {
+        // Fetch bid counts for each item
+        const { data: bidsData } = await supabase
+          .from('bids')
+          .select('item_id')
+          .eq('is_deleted', false)
+
+        const bidCounts =
+          bidsData?.reduce(
+            (acc, bid) => {
+              acc[bid.item_id] = (acc[bid.item_id] || 0) + 1
+              return acc
+            },
+            {} as Record<string, number>
+          ) || {}
+
+        itemsData = itemsData.sort((a, b) => {
+          const countA = bidCounts[a.id!] || 0
+          const countB = bidCounts[b.id!] || 0
+          return countB - countA
+        })
+      } else {
+        // Apply sorting
+        itemsData = itemsData.sort((a, b) => {
+          switch (sortOrder) {
+            case 'ending_soon':
+              // Active items first, then by seconds until end (null last)
+              if (a.is_accepting_bids && !b.is_accepting_bids) return -1
+              if (!a.is_accepting_bids && b.is_accepting_bids) return 1
+              if (a.seconds_until_end === null) return 1
+              if (b.seconds_until_end === null) return -1
+              return Number(a.seconds_until_end) - Number(b.seconds_until_end)
+
+            case 'lowest_price':
+              return Number(a.starting_bid || 0) - Number(b.starting_bid || 0)
+
+            case 'highest_price':
+              return Number(b.starting_bid || 0) - Number(a.starting_bid || 0)
+
+            case 'newest':
+              return (
+                new Date(b.created_at!).getTime() -
+                new Date(a.created_at!).getTime()
+              )
+
+            default:
+              return 0
+          }
+        })
+      }
+
+      setItems(itemsData)
     } catch (err) {
       console.error('Error fetching items:', err)
     } finally {
@@ -248,14 +313,33 @@ export default function Home() {
 
           {/* Items Grid */}
           <div>
-            <div className="flex items-center justify-between mb-3 md:mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 md:mb-4">
               <h2 className="text-xl md:text-2xl font-bold flex items-center gap-2">
                 <Sparkles className="size-5 md:size-6 text-primary" />
                 Itens Disponíveis
               </h2>
-              <p className="text-sm text-muted-foreground">
-                {items.length} {items.length === 1 ? 'item' : 'itens'}
-              </p>
+              <div className="flex items-center gap-3">
+                <p className="text-sm text-muted-foreground">
+                  {items.length} {items.length === 1 ? 'item' : 'itens'}
+                </p>
+                <Select
+                  value={sortOrder}
+                  onValueChange={(value) => setSortOrder(value as SortOrder)}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Ordenar por" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ending_soon">
+                      Terminando em breve
+                    </SelectItem>
+                    <SelectItem value="most_popular">Mais populares</SelectItem>
+                    <SelectItem value="lowest_price">Menor preço</SelectItem>
+                    <SelectItem value="highest_price">Maior preço</SelectItem>
+                    <SelectItem value="newest">Mais recentes</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <ItemsList items={items} loading={loading} />
           </div>
