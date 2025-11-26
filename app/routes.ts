@@ -12,5 +12,6 @@ export default [
   layout('protected-layout.tsx', [
     index('routes/home.tsx'),
     route('item/:id', 'routes/item.$id.tsx'),
+    route('profile', 'routes/profile.tsx'),
   ]),
 ] satisfies RouteConfig

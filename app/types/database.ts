@@ -296,6 +296,7 @@ export type Database = {
           item_id: string | null
           item_title: string | null
           payment_status: Database['public']['Enums']['payment_status'] | null
+          photos: string[] | null
           proof_url: string | null
           user_id: string | null
           winner_email: string | null

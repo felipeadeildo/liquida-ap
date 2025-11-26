@@ -1,4 +1,4 @@
-import { Filter, LogOut, Search, Sparkles, X } from 'lucide-react'
+import { Filter, LogOut, Search, Sparkles, User, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { AdminOnly } from '~/components/admin-only'
@@ -179,6 +179,15 @@ export default function Home() {
             <h1 className="text-xl md:text-2xl font-bold">Liquida AP</h1>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/profile')}
+              className="min-h-10"
+            >
+              <User className="size-4 mr-2" />
+              <span className="hidden sm:inline">Perfil</span>
+            </Button>
             <AdminOnly>
               <CreateItemDialog />
             </AdminOnly>
