@@ -13,5 +13,6 @@ export default [
     index('routes/home.tsx'),
     route('item/:id', 'routes/item.$id.tsx'),
     route('profile', 'routes/profile.tsx'),
+    route('admin/payments', 'routes/admin/payments.tsx'),
   ]),
 ] satisfies RouteConfig
