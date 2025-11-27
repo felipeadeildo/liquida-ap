@@ -1,4 +1,4 @@
-import { Filter, LogOut, Search, Shield, Sparkles, User, X } from 'lucide-react'
+import { Dices, Filter, LogOut, Search, Shield, Sparkles, User, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { AdminOnly } from '~/components/admin-only'
@@ -197,6 +197,15 @@ export default function Home() {
               >
                 <Shield className="size-4 mr-2" />
                 <span className="hidden sm:inline">Pagamentos</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/admin/raffles')}
+                className="min-h-10"
+              >
+                <Dices className="size-4 mr-2" />
+                <span className="hidden sm:inline">Sorteios</span>
               </Button>
               <CreateItemDialog />
             </AdminOnly>
