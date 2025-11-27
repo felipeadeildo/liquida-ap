@@ -42,12 +42,22 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export default function Profile() {
-  const { user, profile, loading: authLoading } = useAuth()
+  const { user, profile, isAdmin, loading: authLoading } = useAuth()
   const navigate = useNavigate()
   const [wonItems, setWonItems] = useState<WonItem[]>([])
   const [donationsWon, setDonationsWon] = useState<DonationWon[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [viewingProfile, setViewingProfile] = useState<Tables<'users'> | null>(
+    null
+  )
+
+  // Get user ID from query params
+  const urlParams = new URLSearchParams(window.location.search)
+  const viewUserId = urlParams.get('user')
+
+  // Determine which user's profile to show
+  const targetUserId = viewUserId && isAdmin ? viewUserId : user?.id
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -56,9 +66,36 @@ export default function Profile() {
     }
   }, [authLoading, user, navigate])
 
+  // Fetch viewed user profile if different from current user
+  useEffect(() => {
+    if (!targetUserId || !isAdmin || targetUserId === user?.id) {
+      setViewingProfile(null)
+      return
+    }
+
+    const fetchViewedProfile = async () => {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', targetUserId)
+        .single()
+
+      if (error) {
+        console.error('Error fetching viewed profile:', error)
+        toast.error('Erro ao carregar perfil do usuário')
+        navigate('/profile')
+        return
+      }
+
+      setViewingProfile(data)
+    }
+
+    fetchViewedProfile()
+  }, [targetUserId, isAdmin, user?.id, navigate])
+
   // Fetch won items
   useEffect(() => {
-    if (!user) return
+    if (!targetUserId) return
 
     fetchWonItems()
 
@@ -80,10 +117,10 @@ export default function Profile() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [user])
+  }, [targetUserId])
 
   const fetchWonItems = async () => {
-    if (!user) return
+    if (!targetUserId) return
 
     try {
       setLoading(true)
@@ -93,7 +130,7 @@ export default function Profile() {
       const { data: auctionData, error: auctionError } = await supabase
         .from('finishes')
         .select('*')
-        .eq('user_id', user.id) // Filter by current user, even if admin
+        .eq('user_id', targetUserId)
         .order('finished_at', { ascending: false })
 
       if (auctionError) throw auctionError
@@ -115,7 +152,7 @@ export default function Profile() {
           )
         `
         )
-        .eq('user_id', user.id)
+        .eq('user_id', targetUserId)
         .in('status', ['approved', 'delivered'])
         .order('created_at', { ascending: false })
 
@@ -155,9 +192,17 @@ export default function Profile() {
 
   if (!user) return null
 
+  // Use viewingProfile if admin is viewing another user, otherwise use own profile
+  const displayProfile = viewingProfile || profile
+  const isViewingOtherUser = !!viewingProfile
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <ProfileHeader profile={profile} navigate={navigate} />
+      <ProfileHeader
+        profile={displayProfile}
+        navigate={navigate}
+        isViewingOtherUser={isViewingOtherUser}
+      />
       <main className="flex-1 p-4 md:p-6">
         <div className="container mx-auto max-w-5xl space-y-6">
           {loading && <LoadingState />}
@@ -180,25 +225,38 @@ export default function Profile() {
 function ProfileHeader({
   profile,
   navigate,
+  isViewingOtherUser,
 }: {
   profile: Tables<'users'> | null
   navigate: (path: string) => void
+  isViewingOtherUser: boolean
 }) {
   return (
     <header className="border-b bg-background sticky top-0 z-30">
       <div className="container mx-auto px-4 py-3 md:py-4 flex justify-between items-center">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/')}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate(isViewingOtherUser ? '/admin/users' : '/')}
+          >
             <ArrowLeft className="size-4 mr-2" />
             Voltar
           </Button>
           <div className="h-6 w-px bg-border hidden sm:block" />
           <div className="hidden sm:block">
-            <h1 className="text-xl md:text-2xl font-bold">Meu Perfil</h1>
+            <h1 className="text-xl md:text-2xl font-bold">
+              {isViewingOtherUser ? `Perfil de ${profile?.name}` : 'Meu Perfil'}
+            </h1>
             <p className="text-xs text-muted-foreground">{profile?.email}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {isViewingOtherUser && (
+            <Badge variant="default" className="hidden sm:inline-flex">
+              Visualização Admin
+            </Badge>
+          )}
           {profile?.is_insper && (
             <Badge variant="secondary" className="hidden sm:inline-flex">
               Insper

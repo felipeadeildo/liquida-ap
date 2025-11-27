@@ -15,5 +15,6 @@ export default [
     route('profile', 'routes/profile.tsx'),
     route('admin/payments', 'routes/admin/payments.tsx'),
     route('admin/raffles', 'routes/admin/raffles.tsx'),
+    route('admin/users', 'routes/admin/users.tsx'),
   ]),
 ] satisfies RouteConfig
