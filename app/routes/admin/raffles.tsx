@@ -1,16 +1,17 @@
+import confetti from 'canvas-confetti'
 import {
   ArrowLeft,
   CheckCircle2,
   Dices,
   Gift,
   Loader2,
+  MessageCircle,
   Sparkles,
   Users,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
-import confetti from 'canvas-confetti'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Card } from '~/components/ui/card'
@@ -23,7 +24,9 @@ import type { Route } from './+types/raffles'
 
 type DonationItem = Tables<'items_with_status'> & {
   participant_count: number
-  claims: Array<Tables<'donation_claims'> & { users_public: { name: string | null } | null }>
+  claims: Array<
+    Tables<'donation_claims'> & { users_public: { name: string | null } | null }
+  >
 }
 
 export function meta({}: Route.MetaArgs) {
@@ -97,7 +100,8 @@ export default function AdminRaffles() {
 
           if (claimsError) throw claimsError
 
-          const pendingCount = claims?.filter((c) => c.status === 'pending').length || 0
+          const pendingCount =
+            claims?.filter((c) => c.status === 'pending').length || 0
 
           return {
             ...item,
@@ -190,7 +194,8 @@ export default function AdminRaffles() {
 
   const pendingItems = items.filter((i) => i.participant_count > 0)
   const completedItems = items.filter(
-    (i) => i.participant_count === 0 && i.claims.some((c) => c.status === 'approved')
+    (i) =>
+      i.participant_count === 0 && i.claims.some((c) => c.status === 'approved')
   )
 
   return (
@@ -225,7 +230,9 @@ export default function AdminRaffles() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
             <Card className="p-4">
               <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Total de Doações</p>
+                <p className="text-xs text-muted-foreground">
+                  Total de Doações
+                </p>
                 <p className="text-2xl md:text-3xl font-bold">{items.length}</p>
               </div>
             </Card>
@@ -247,7 +254,9 @@ export default function AdminRaffles() {
             </Card>
             <Card className="p-4">
               <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Total Participantes</p>
+                <p className="text-xs text-muted-foreground">
+                  Total Participantes
+                </p>
                 <p className="text-2xl md:text-3xl font-bold text-blue-600">
                   {items.reduce((sum, i) => sum + i.claims.length, 0)}
                 </p>
@@ -392,6 +401,45 @@ function RaffleCard({
 function CompletedRaffleCard({ item }: { item: DonationItem }) {
   const winner = item.claims.find((c) => c.status === 'approved')
   const totalParticipants = item.claims.length
+  const [loadingWinner, setLoadingWinner] = useState(false)
+
+  const contactWinner = async () => {
+    if (!winner) {
+      toast.error('Vencedor não encontrado')
+      return
+    }
+
+    try {
+      setLoadingWinner(true)
+
+      // Fetch winner's full user data including WhatsApp
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('whatsapp, name')
+        .eq('id', winner.user_id)
+        .single()
+
+      if (userError) throw userError
+
+      if (!userData?.whatsapp) {
+        toast.error('Usuário não possui WhatsApp cadastrado')
+        return
+      }
+
+      // Open WhatsApp with pre-filled message
+      const message = `Olá ${userData.name || 'participante'}! Você foi sorteado e ganhou o item "${item.title || 'sem título'}" no Liquida AP. Entre em contato para combinar a retirada.`
+      const whatsappNumber = userData.whatsapp.replace(/\D/g, '') // Remove non-digits
+      window.open(
+        `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`,
+        '_blank'
+      )
+    } catch (err) {
+      console.error('Error contacting winner:', err)
+      toast.error('Erro ao contactar vencedor')
+    } finally {
+      setLoadingWinner(false)
+    }
+  }
 
   return (
     <Card className="p-4 space-y-3 border-green-600/20 bg-green-600/5">
@@ -427,6 +475,25 @@ function CompletedRaffleCard({ item }: { item: DonationItem }) {
           <span className="text-sm font-semibold">{totalParticipants}</span>
         </div>
       </div>
+
+      <Button
+        onClick={contactWinner}
+        disabled={!winner || loadingWinner}
+        className="w-full gap-2"
+        variant="outline"
+      >
+        {loadingWinner ? (
+          <>
+            <Loader2 className="size-4 animate-spin" />
+            Carregando...
+          </>
+        ) : (
+          <>
+            <MessageCircle className="size-4" />
+            Contactar Vencedor via WhatsApp
+          </>
+        )}
+      </Button>
     </Card>
   )
 }

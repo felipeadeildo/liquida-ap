@@ -3,6 +3,7 @@ import {
   CheckCircle2,
   Clock,
   Copy,
+  Gift,
   MessageCircle,
   Package,
   Sparkles,
@@ -21,6 +22,17 @@ import type { Tables } from '~/types/database'
 import type { Route } from './+types/profile'
 
 type WonItem = Tables<'finishes'>
+type DonationWon = {
+  id: string
+  item_id: string
+  status: string
+  created_at: string
+  item: {
+    title: string
+    photos: string[]
+    auction_end: string | null
+  } | null
+}
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -33,6 +45,7 @@ export default function Profile() {
   const { user, profile, loading: authLoading } = useAuth()
   const navigate = useNavigate()
   const [wonItems, setWonItems] = useState<WonItem[]>([])
+  const [donationsWon, setDonationsWon] = useState<DonationWon[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -76,14 +89,54 @@ export default function Profile() {
       setLoading(true)
       setError(null)
 
-      const { data, error: fetchError } = await supabase
+      // Fetch auction wins
+      const { data: auctionData, error: auctionError } = await supabase
         .from('finishes')
         .select('*')
         .eq('user_id', user.id) // Filter by current user, even if admin
         .order('finished_at', { ascending: false })
 
-      if (fetchError) throw fetchError
-      setWonItems(data || [])
+      if (auctionError) throw auctionError
+      setWonItems(auctionData || [])
+
+      // Fetch donation wins (approved or delivered)
+      const { data: donationData, error: donationError } = await supabase
+        .from('donation_claims')
+        .select(
+          `
+          id,
+          item_id,
+          status,
+          created_at,
+          items:item_id (
+            title,
+            photos,
+            auction_end
+          )
+        `
+        )
+        .eq('user_id', user.id)
+        .in('status', ['approved', 'delivered'])
+        .order('created_at', { ascending: false })
+
+      if (donationError) throw donationError
+
+      // Transform data to match DonationWon type
+      const transformedDonations = (donationData || []).map((claim: any) => ({
+        id: claim.id,
+        item_id: claim.item_id,
+        status: claim.status,
+        created_at: claim.created_at,
+        item: claim.items
+          ? {
+              title: claim.items.title,
+              photos: claim.items.photos,
+              auction_end: claim.items.auction_end,
+            }
+          : null,
+      }))
+
+      setDonationsWon(transformedDonations)
     } catch (err) {
       console.error('Error fetching won items:', err)
       setError('Erro ao carregar seus itens ganhos')
@@ -111,8 +164,11 @@ export default function Profile() {
           {error && <ErrorState message={error} onRetry={fetchWonItems} />}
           {!loading && !error && (
             <>
-              <ProfileStats wonItems={wonItems} />
+              <ProfileStats wonItems={wonItems} donationsWon={donationsWon} />
               <WonItemsList items={wonItems} navigate={navigate} />
+              {donationsWon.length > 0 && (
+                <DonationsWonList items={donationsWon} />
+              )}
             </>
           )}
         </div>
@@ -154,7 +210,13 @@ function ProfileHeader({
   )
 }
 
-function ProfileStats({ wonItems }: { wonItems: WonItem[] }) {
+function ProfileStats({
+  wonItems,
+  donationsWon,
+}: {
+  wonItems: WonItem[]
+  donationsWon: DonationWon[]
+}) {
   const totalValue = wonItems.reduce(
     (sum, item) => sum + Number(item.final_value || 0),
     0
@@ -166,12 +228,17 @@ function ProfileStats({ wonItems }: { wonItems: WonItem[] }) {
     (i) => i.payment_status === 'delivered'
   ).length
 
+  const totalItems = wonItems.length + donationsWon.length
+
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
       <Card className="p-4">
         <div className="space-y-1">
-          <p className="text-xs text-muted-foreground">Itens Ganhos</p>
-          <p className="text-2xl md:text-3xl font-bold">{wonItems.length}</p>
+          <p className="text-xs text-muted-foreground">Total Ganhos</p>
+          <p className="text-2xl md:text-3xl font-bold">{totalItems}</p>
+          <p className="text-[10px] text-muted-foreground">
+            {wonItems.length} leilão + {donationsWon.length} doação
+          </p>
         </div>
       </Card>
       <Card className="p-4">
@@ -444,5 +511,114 @@ function ErrorState({
         Tentar Novamente
       </Button>
     </div>
+  )
+}
+
+function DonationsWonList({ items }: { items: DonationWon[] }) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl md:text-2xl font-bold flex items-center gap-2">
+          <Gift className="size-5 md:size-6 text-green-600" />
+          Minhas Doações Ganhas
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          {items.length} {items.length === 1 ? 'item' : 'itens'}
+        </p>
+      </div>
+      <div className="grid grid-cols-1 gap-4">
+        {items.map((donation) => (
+          <DonationWonCard key={donation.id} donation={donation} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function DonationWonCard({ donation }: { donation: DonationWon }) {
+  const isDelivered = donation.status === 'delivered'
+  const adminWhatsApp = import.meta.env.VITE_ADMIN_WHATSAPP || '5582994011841'
+
+  const openWhatsApp = () => {
+    const message = `Olá! Ganhei o item "${donation.item?.title || 'sem título'}" no sorteio do Liquida AP. Gostaria de combinar a retirada.`
+    window.open(
+      `https://wa.me/${adminWhatsApp}?text=${encodeURIComponent(message)}`,
+      '_blank'
+    )
+  }
+
+  return (
+    <Card className="p-4 md:p-6 space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div className="flex gap-3 flex-1">
+          {donation.item?.photos && donation.item.photos.length > 0 && (
+            <img
+              src={donation.item.photos[0]}
+              alt={donation.item.title || ''}
+              className="size-16 md:size-20 rounded object-cover shrink-0"
+            />
+          )}
+          <div className="flex-1 space-y-1">
+            <h3 className="text-lg md:text-xl font-bold">
+              {donation.item?.title || 'Item sem título'}
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              Sorteado {formatRelativeDate(donation.created_at)} •{' '}
+              {formatDate(donation.created_at)}
+            </p>
+          </div>
+        </div>
+        <Badge
+          variant={isDelivered ? 'secondary' : 'default'}
+          className="gap-1.5 shrink-0"
+        >
+          {isDelivered ? (
+            <>
+              <Package className="size-3" />
+              Entregue
+            </>
+          ) : (
+            <>
+              <CheckCircle2 className="size-3" />
+              Aprovado
+            </>
+          )}
+        </Badge>
+      </div>
+
+      {!isDelivered && (
+        <div className="border border-green-600/20 rounded-lg p-4 bg-green-600/5 space-y-3">
+          <div className="flex items-center gap-2">
+            <Gift className="size-5 text-green-600" />
+            <h4 className="font-semibold text-green-600">
+              Parabéns! Você ganhou este item
+            </h4>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Entre em contato para combinar a retirada do item.
+          </p>
+          <Button
+            variant="default"
+            className="w-full gap-2"
+            onClick={openWhatsApp}
+          >
+            <MessageCircle className="size-4" />
+            Combinar Retirada via WhatsApp
+          </Button>
+        </div>
+      )}
+
+      {isDelivered && (
+        <div className="border border-green-600/20 rounded-lg p-4 bg-green-600/5 space-y-2">
+          <div className="flex items-center gap-2">
+            <Package className="size-5 text-green-600" />
+            <h4 className="font-semibold text-green-600">Item Entregue</h4>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Este item já foi entregue. Obrigado pela participação!
+          </p>
+        </div>
+      )}
+    </Card>
   )
 }
